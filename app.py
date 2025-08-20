@@ -1,356 +1,294 @@
-# app.py (PostgreSQL Version)
+# app_simple.py - Pure Local Search Version (No AI Dependencies)
 
 import os
 import streamlit as st
-import shutil
 from dotenv import load_dotenv
 from datetime import datetime
 import psycopg2
 from sqlalchemy import create_engine, text
 
-# --- IMPORTS FOR TOOLS ---
+# --- SIMPLE IMPORTS ---
 from ics import Calendar, Event
-from langchain.tools import StructuredTool
-from pydantic import BaseModel, Field
 
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain.chains import RetrievalQA
-from langchain.vectorstores import Chroma
-from langchain.docstore.document import Document
-from langchain_community.utilities import SQLDatabase
-from langchain.agents import create_sql_agent
-from langchain.agents.agent_toolkits import SQLDatabaseToolkit
-
-# --- 0. CONFIGURATION ---
+# --- CONFIGURATION ---
 load_dotenv()
 
-if "GOOGLE_API_KEY" not in os.environ or not os.environ["GOOGLE_API_KEY"]:
-    st.error("Error: Please set your Google API Key in a .env file.")
-    st.info("Please create a file named '.env' in the project root and add the following line: \n\nGOOGLE_API_KEY=\"YOUR_API_KEY\"")
-    st.stop()
+# PostgreSQL Database Configuration
+USE_ONLINE_DATABASE = os.getenv("USE_ONLINE_DATABASE", "true").lower() == "true"
+DATABASE_ONLINE_URL = os.getenv("DATABASE_ONLINE")
 
-# PostgreSQL/Supabase Database Configuration with SQLite fallback
-USE_SQLITE_FALLBACK = os.getenv("USE_SQLITE_FALLBACK", "false").lower() == "true"
-DATABASE_URL = os.getenv("DATABASE")
-
-if not DATABASE_URL:
-    # Fallback to individual connection parameters
+if USE_ONLINE_DATABASE and DATABASE_ONLINE_URL:
+    DATABASE_URL = DATABASE_ONLINE_URL.replace("postgres://", "postgresql://", 1)
+    print("Using online Prisma database...")
+else:
     DB_HOST = os.getenv("DB_HOST", "localhost")
     DB_PORT = os.getenv("DB_PORT", "5432")
-    DB_NAME = os.getenv("DB_NAME", "project")
+    DB_NAME = os.getenv("DB_NAME", "travel_db")
     DB_USER = os.getenv("DB_USER", "postgres")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "0183813235")
     
-    # Create PostgreSQL connection string with SSL for Supabase
-    if "supabase" in DB_HOST.lower():
-        DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
-    else:
-        DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+    print("Using local PostgreSQL database...")
 
-# Test database connection and fallback to SQLite if needed
 def get_database_url():
-    if USE_SQLITE_FALLBACK:
-        print("Using SQLite fallback database...")
-        return "sqlite:///data/travel.db"
+    if USE_ONLINE_DATABASE and DATABASE_ONLINE_URL:
+        try:
+            conn = psycopg2.connect(DATABASE_ONLINE_URL)
+            conn.close()
+            print("Successfully connected to online Prisma database")
+            return DATABASE_ONLINE_URL.replace("postgres://", "postgresql://", 1)
+        except Exception as e:
+            print(f"Online connection failed: {e}")
+            print("Falling back to local PostgreSQL...")
     
     try:
-        # Test PostgreSQL/Supabase connection
-        import psycopg2
-        if "sslmode" not in DATABASE_URL:
-            test_url = DATABASE_URL + "?sslmode=require" if "supabase" in DATABASE_URL else DATABASE_URL
-        else:
-            test_url = DATABASE_URL
-            
-        conn = psycopg2.connect(test_url)
+        local_url = f"postgresql://{os.getenv('DB_USER', 'postgres')}:{os.getenv('DB_PASSWORD', '0183813235')}@{os.getenv('DB_HOST', 'localhost')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'travel_db')}"
+        conn = psycopg2.connect(local_url.replace("postgresql://", "postgres://", 1))
         conn.close()
-        print(f"Using PostgreSQL/Supabase database")
-        return DATABASE_URL
-    except Exception as e:
-        print(f"PostgreSQL connection failed: {e}")
-        print("Falling back to SQLite database...")
-        return "sqlite:///data/travel.db"
-
-DATABASE_URL = get_database_url()
-
-VECTOR_DB_PATH = os.path.join("data", "chroma_db_policy")
-CALENDAR_FILE = "trip_event.ics"
-
-# --- 1. TOOL DEFINITION ---
-
-class CalendarToolInputSchema(BaseModel):
-    summary: str = Field(description="The title or summary of the calendar event.")
-    start_date_str: str = Field(description="The start date of the trip in 'YYYY-MM-DD' format.")
-    end_date_str: str = Field(description="The end date of the trip in 'YYYY-MM-DD' format.")
-    location: str = Field(description="The destination city of the trip.")
-
-def create_calendar_event(summary: str, start_date_str: str, end_date_str: str, location: str) -> str:
-    try:
-        c = Calendar()
-        e = Event()
-        e.name = summary
-        e.begin = datetime.strptime(start_date_str, '%Y-%m-%d')
-        e.end = datetime.strptime(end_date_str, '%Y-%m-%d')
-        e.location = location
-        c.events.add(e)
-        with open(CALENDAR_FILE, 'w') as f:
-            f.write(c.serialize())
-        return f"Successfully created calendar event file: {CALENDAR_FILE}"
-    except Exception as e:
-        return f"Failed to create calendar event file. Error: {e}"
-
-# --- 2. CORE LOGIC (Loading and Caching Agents) ---
-
-@st.cache_resource
-def get_qa_chain():
-    st.info("Initializing Policy Q&A Agent (using Google Gemini)...")
-    
-    # Connect to PostgreSQL database and get policies
-    try:
-        engine = create_engine(DATABASE_URL)
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT rule_name, description FROM travel_policies"))
-            policies = result.fetchall()
+        print("Successfully connected to local PostgreSQL database")
+        return local_url
     except Exception as e:
         st.error(f"Database connection failed: {e}")
-        st.info("Please ensure PostgreSQL is running and the database credentials are correct in your .env file")
         st.stop()
+
+DATABASE_URL = get_database_url()
+CALENDAR_FILE = "trip_event.ics"
+
+# --- GET POLICIES FROM DATABASE ---
+@st.cache_data
+def load_policies():
+    """Load policies from database and return as serializable dictionaries"""
+    engine = create_engine(DATABASE_URL)
     
-    if not policies:
-        st.error("No policies found in database! Please run setup_database.py first.")
-        st.stop()
+    with engine.connect() as connection:
+        policies_result = connection.execute(text("SELECT rule_name, description FROM travel_policies"))
+        policies = policies_result.fetchall()
     
-    st.info(f"Found {len(policies)} policies in database")
-    
-    # Create more detailed documents from policies
-    policy_documents = []
+    policy_list = []
     for name, desc in policies:
-        # Create comprehensive content for each policy
-        content = f"""Policy: {name}
-Description: {desc}
-Rule Name: {name}
-Details: {desc}
-Travel Policy: {name} - {desc}"""
+        policy_dict = {
+            'rule_name': name,
+            'description': desc,
+            'content': f"Policy Name: {name}\nDetails: {desc}\nTravel Policy: {name} - {desc}"
+        }
+        policy_list.append(policy_dict)
+    
+    return policy_list
+# --- SMART LOCAL SEARCH SYSTEM ---
+def smart_policy_search(query, policies):
+    """Smart local search that matches questions to relevant policies"""
+    
+    question_lower = query.lower()
+    relevant_policies = []
+    
+    # Policy keyword mapping
+    policy_keywords = {
+        'flight': ['flight', 'plane', 'airplane', 'air travel', 'flying', 'business class', 'economy', 'airline'],
+        'hotel': ['hotel', 'accommodation', 'lodging', 'stay', 'room', 'night', 'per night'],
+        'meal': ['meal', 'food', 'dining', 'restaurant', 'breakfast', 'lunch', 'dinner', 'per diem', 'allowance'],
+        'approval': ['approval', 'approve', 'manager', 'supervisor', 'permission', 'international', 'authorize']
+    }
+    
+    # Find which categories are mentioned
+    mentioned_categories = []
+    for category, keywords in policy_keywords.items():
+        if any(keyword in question_lower for keyword in keywords):
+            mentioned_categories.append(category)
+    
+    # Match policies to categories
+    for policy in policies:
+        policy_content_lower = policy['content'].lower()
+        policy_name_lower = policy['rule_name'].lower()
         
-        policy_documents.append(Document(
-            page_content=content,
-            metadata={"source": "database", "rule_name": name, "policy_type": "travel"}
-        ))
+        # Check if this policy matches any mentioned categories
+        for category in mentioned_categories:
+            if category in policy_content_lower or category in policy_name_lower:
+                if policy not in relevant_policies:
+                    relevant_policies.append(policy)
+                break
     
-    st.info(f"Created {len(policy_documents)} policy documents for vector database")
+    # Intelligent fallback for different question types
+    if not relevant_policies:
+        # Cost/budget questions
+        if any(word in question_lower for word in ['cost', 'price', 'money', 'budget', 'expensive', 'cheap', 'limit', 'max', 'maximum']):
+            for policy in policies:
+                if any(word in policy['content'].lower() for word in ['cost', 'per night', 'per diem', 'business class', 'maximum']):
+                    relevant_policies.append(policy)
+        
+        # Rule/requirement questions
+        elif any(word in question_lower for word in ['rule', 'requirement', 'must', 'need', 'required', 'allow', 'permitted', 'can i', 'should i']):
+            for policy in policies:
+                if any(word in policy['content'].lower() for word in ['approval', 'require', 'must', 'international']):
+                    relevant_policies.append(policy)
+        
+        # General travel questions
+        elif any(word in question_lower for word in ['travel', 'trip', 'business trip', 'policy', 'policies']):
+            relevant_policies = policies[:2]  # Show first 2
     
-    # Initialize embeddings
-    embedding_function = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    # If still no matches, show most relevant
+    if not relevant_policies:
+        relevant_policies = policies[:1]
     
-    # Use the global VECTOR_DB_PATH
-    vector_db_path = VECTOR_DB_PATH
+    # Format response
+    if len(relevant_policies) == 1:
+        policy = relevant_policies[0]
+        response = f"**📋 {policy['rule_name']}:**\n\n{policy['content']}\n\n"
+        response += "💡 **Need more info?** Ask about specific topics like 'hotel costs' or 'flight rules'."
     
-    # Check if vector database exists and try to load it, if fails recreate
-    try:
-        if os.path.exists(vector_db_path):
-            st.info("Attempting to load existing vector database...")
-            vector_db = Chroma(persist_directory=vector_db_path, embedding_function=embedding_function)
-            # Test if database works
-            test_results = vector_db.similarity_search("test policy", k=1)
-            if len(test_results) == 0:
-                raise Exception("Vector database is empty")
-            st.info("Successfully loaded existing vector database")
+    else:
+        response = f"**📋 Found {len(relevant_policies)} Relevant Policies:**\n\n"
+        for i, policy in enumerate(relevant_policies[:3], 1):
+            response += f"**{i}. {policy['rule_name']}:**\n{policy['content']}\n\n"
+        
+        if len(relevant_policies) > 3:
+            response += f"💡 **And {len(relevant_policies) - 3} more policies...** Try a more specific question."
         else:
-            raise Exception("Vector database doesn't exist")
+            response += "💡 **Need something specific?** Try asking about 'meal allowance' or 'approval process'."
+    
+    return response
+
+# --- CALENDAR FUNCTION ---
+def create_calendar_event(destination: str, departure_date: str, return_date: str, purpose: str) -> str:
+    """Create a calendar event for the travel request."""
+    try:
+        calendar = Calendar()
+        event = Event()
+        
+        event.name = f"Business Travel to {destination}"
+        event.description = f"Purpose: {purpose}"
+        event.begin = datetime.strptime(departure_date, "%Y-%m-%d")
+        event.end = datetime.strptime(return_date, "%Y-%m-%d")
+        event.location = destination
+        
+        calendar.events.add(event)
+        
+        with open(CALENDAR_FILE, "w") as f:
+            f.writelines(calendar.serialize_iter())
+        
+        return f"✅ Calendar event created successfully! File saved as '{CALENDAR_FILE}'"
     except Exception as e:
-        st.info(f"Creating new vector database... ({str(e)})")
-        # Create new vector database in a different location first
-        temp_path = vector_db_path + "_temp"
-        if os.path.exists(temp_path):
-            try:
-                shutil.rmtree(temp_path)
-            except:
-                pass
-        
-        vector_db = Chroma.from_documents(
-            documents=policy_documents,
-            embedding=embedding_function,
-            persist_directory=temp_path
-        )
-        vector_db.persist()
-        
-        # Try to replace the old database
-        try:
-            if os.path.exists(vector_db_path):
-                shutil.rmtree(vector_db_path)
-            shutil.move(temp_path, vector_db_path)
-            st.info("Vector database created and moved to final location")
-        except:
-            # If moving fails, just use the temp location
-            vector_db_path = temp_path
-            st.info("Vector database created in temporary location")
-    
-    st.info("Vector database ready for use")
-    
-    # Create retriever with more documents returned
-    retriever = vector_db.as_retriever(search_kwargs={"k": 4})
-    
-    # Initialize LLM
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash", 
-        temperature=0.1,  # Slightly higher for more natural responses
-        convert_system_message_to_human=True
-    )
-    
-    # Create QA chain with custom prompt
-    from langchain.prompts import PromptTemplate
-    
-    prompt_template = """You are a helpful travel policy assistant. Use the following policy information to answer questions about travel policies.
+        return f"❌ Error creating calendar event: {str(e)}"
 
-Context from travel policies:
-{context}
+# --- STREAMLIT UI ---
+st.title("✈️ Travel Policy Advisor")
+st.info("🔍 **Smart Local Search** - No AI dependencies, pure keyword matching")
 
-Question: {question}
-
-Instructions:
-- Provide specific, helpful answers based on the policy information
-- If you find relevant policy information, cite the specific policy name
-- If the exact information isn't available, provide what you can from related policies
-- Be conversational and helpful
-- For meal allowances, refer to the "Meal Per Diem" policy if available
-
-Answer:"""
-
-    PROMPT = PromptTemplate(
-        template=prompt_template,
-        input_variables=["context", "question"]
-    )
-    
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=retriever,
-        return_source_documents=True,
-        chain_type_kwargs={"prompt": PROMPT}
-    )
-    
-    st.success("Policy Q&A Agent is ready!")
-    return qa_chain
-
-@st.cache_resource
-def get_validation_agent():
-    st.info("Initializing Request Validation Agent with Calendar Tool...")
-    db = SQLDatabase.from_uri(DATABASE_URL)
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
-    toolkit = SQLDatabaseToolkit(db=db, llm=llm)
-    
-    calendar_tool = StructuredTool.from_function(
-        func=create_calendar_event,
-        name="CalendarEventCreator",
-        description="Use this tool to create a calendar event file (.ics) for an approved trip.",
-        args_schema=CalendarToolInputSchema
-    )
-    
-    # +++ THE ULTIMATE PROMPT +++
-    prefix = """You are a fully automated travel desk agent with multi-step query capabilities. Your entire process is as follows:
-
-            **Step 1: Information Gathering (If Necessary)**
-            The user will provide an email address, but many tables use `employee_id`. Your first task is to query the `employees` table to find the corresponding `employee_id` for the user's email. You will use this ID for all subsequent queries.
-
-            **Step 2: Audit the Request**
-            Using the `employee_id`, you must now analyze the user's travel request against the database policies.
-
-            **Step 3: Generate the Final Report**
-            Next, you must generate a report based on your audit. This report MUST use the following format EXACTLY:
-
-            **Compliance Summary:** [Compliant, Partially Compliant, or Non-Compliant]
-
-            **Explanation:**
-
-            *   **Violations:**
-                *   [List each VIOLATED policy. If none, state "No violations found."]
-            *   **Passed Policies:**
-                *   [List ONLY policies that were explicitly passed. If none, state "No policies were explicitly passed."]
-            *   **Uncertain Policies:**
-                *   [List policies that could not be evaluated. If none, state "No uncertain policies."]
-
-            **Recommendations:**
-            *   [Provide actionable steps.]
-
-            **Step 4: Schedule the Trip (Conditional)**
-            If, and only if, the **Compliance Summary** in your Step 3 report is 'Compliant' or 'Partially Compliant', your immediate and final action MUST be to call the `CalendarEventCreator` tool. Extract all necessary arguments from the user's original request.
-
-            Your final output to the user should ONLY be the report from Step 3.
-            """
-    
-    agent_executor = create_sql_agent(
-        llm=llm,
-        toolkit=toolkit,
-        verbose=True,
-        agent_type="openai-tools",
-        prefix=prefix,
-        extra_tools=[calendar_tool]
-    )
-    st.success("Request Validation Agent is ready!")
-    return agent_executor
-
-# --- 3. STREAMLIT UI ---
-
-st.title("✈️ Intelligent Travel Policy Advisor")
-tab1, tab2 = st.tabs(["Policy Q&A", "Submit & Validate Request"])
+tab1, tab2 = st.tabs(["Policy Q&A", "Submit Travel Request"])
 
 with tab1:
-    # Unchanged
-    st.header("Ask a Question About Travel Policies")
-    qa_chain = get_qa_chain()
-    if "messages" not in st.session_state: st.session_state.messages = []
+    st.header("Ask About Travel Policies")
+    st.markdown("**💡 Try specific questions like:**")
+    st.markdown("- What are the hotel cost limits?")
+    st.markdown("- Do I need approval for international travel?")
+    st.markdown("- What's the meal allowance?")
+    st.markdown("- Flight class rules for long trips?")
+    
+    # Load policies
+    try:
+        policies = load_policies()
+        st.success(f"✅ Loaded {len(policies)} travel policies")
+    except Exception as e:
+        st.error(f"❌ Error loading policies: {e}")
+        st.stop()
+    
+    # Chat interface
+    if "messages" not in st.session_state: 
+        st.session_state.messages = []
+    
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]): st.markdown(message["content"])
-    if prompt := st.chat_input("e.g., What are the rules for long flights?"):
+        with st.chat_message(message["role"]): 
+            st.markdown(message["content"])
+    
+    if prompt := st.chat_input("e.g., What are the hotel booking rules?"):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"): st.markdown(prompt)
+        with st.chat_message("user"): 
+            st.markdown(prompt)
+        
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response = qa_chain.invoke(prompt)
-                st.markdown(response['result'])
-        st.session_state.messages.append({"role": "assistant", "content": response['result']})
+            with st.spinner("Searching policies..."):
+                response = smart_policy_search(prompt, policies)
+                st.markdown(response)
+        
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
 with tab2:
-    st.header("Submit a New Travel Request for Validation")
-    validation_agent = get_validation_agent()
-
-    with st.form("request_form"):
-        employee_email = st.text_input("Employee Email", "employee@example.com")
-        destination = st.text_input("Destination", "London")
-        departure_date = st.date_input("Departure Date")
-        return_date = st.date_input("Return Date")
-        purpose = st.text_area("Purpose of Travel", "Attend the 2025 Global Tech Summit")
-        estimated_cost = st.number_input("Estimated Cost (USD)", min_value=0, value=1200)
-        submitted = st.form_submit_button("Validate and Schedule")
-
-    if submitted:
-        if os.path.exists(CALENDAR_FILE): os.remove(CALENDAR_FILE)
-
-        request_details = (
-            f"Please validate the following travel request and create a calendar event for it:\n"
-            f"- Employee Email: '{employee_email}'\n"
-            f"- Destination: {destination}\n"
-            f"- Start Date: {departure_date.strftime('%Y-%m-%d')}\n"
-            f"- End Date: {return_date.strftime('%Y-%m-%d')}\n"
-            f"- Purpose: {purpose}\n"
-            f"- Estimated Cost: ${estimated_cost}\n"
-        )
-        st.info("Your request has been submitted. The AI agent is now processing it...")
+    st.header("Submit Travel Request")
+    st.info("📋 Basic travel request submission with calendar creation")
+    
+    with st.form("travel_request"):
+        col1, col2 = st.columns(2)
+        with col1:
+            destination = st.text_input("Destination", placeholder="e.g., New York")
+            departure_date = st.date_input("Departure Date")
+            estimated_cost = st.number_input("Estimated Cost ($)", min_value=0.0, step=50.0)
+        with col2:
+            return_date = st.date_input("Return Date")
+            purpose = st.text_area("Purpose of Travel", placeholder="e.g., Client meeting")
+            employee_email = st.text_input("Employee Email", placeholder="your.email@company.com")
         
-        with st.spinner("Agent is checking database, policies, and creating calendar event..."):
-            try:
-                response = validation_agent.invoke({"input": request_details})
-                st.success("Processing Complete!")
-                st.markdown(response['output'])
-            except Exception as e:
-                st.error(f"An error occurred while processing your request: {e}")
-
-        if os.path.exists(CALENDAR_FILE):
-            st.markdown("---")
-            st.subheader("🗓️ Download Calendar Event")
-            with open(CALENDAR_FILE, "rb") as file:
-                st.download_button(
-                    label="Download .ics file",
-                    data=file,
-                    file_name=CALENDAR_FILE,
-                    mime="text/calendar"
+        submitted = st.form_submit_button("Submit Request")
+        
+        if submitted:
+            if destination and purpose and employee_email:
+                st.success("✅ Travel request submitted!")
+                st.info(f"""
+                **Request Summary:**
+                - Destination: {destination}
+                - Dates: {departure_date} to {return_date}
+                - Cost: ${estimated_cost}
+                - Purpose: {purpose}
+                
+                📞 **Next Steps:** Contact your manager for approval.
+                """)
+                
+                # Create calendar event
+                calendar_result = create_calendar_event(
+                    destination=destination,
+                    departure_date=str(departure_date),
+                    return_date=str(return_date),
+                    purpose=purpose
                 )
+                st.info(calendar_result)
+            else:
+                st.error("Please fill in all required fields.")
+
+# --- SIDEBAR ---
+with st.sidebar:
+    st.header("ℹ️ System Info")
+    st.success("✅ Local Search Active")
+    st.info("🚀 No AI dependencies")
+    
+    st.header("📋 Quick Policy Guide")
+    st.markdown("""
+    **Flight Costs:** Business class for 6+ hour flights
+    **Hotel:** Max $300/night in major cities  
+    **Meals:** $75 daily allowance
+    **Approval:** Manager approval for international travel
+    """)
+    
+    st.header("🔄 Database")
+    if USE_ONLINE_DATABASE:
+        st.info("🌐 Online (Prisma)")
+    else:
+        st.info("🏠 Local (PostgreSQL)")
+    
+    st.header("💡 Search Tips")
+    st.markdown("""
+    **Be specific:**
+    - "hotel cost limits"
+    - "flight class rules" 
+    - "meal allowance"
+    - "approval requirements"
+    """)
+    
+    # Show all policies
+    if st.button("📋 Show All Policies"):
+        try:
+            policies = load_policies()
+            st.markdown("**All Travel Policies:**")
+            for i, policy in enumerate(policies, 1):
+                st.markdown(f"**{i}. {policy['rule_name']}**")
+                st.markdown(f"{policy['description']}")
+                st.markdown("---")
+        except Exception as e:
+            st.error(f"Error: {e}")
