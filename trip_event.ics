@@ -1,0 +1,12 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:ics.py - http://git.io/lLljaA
+BEGIN:VEVENT
+DESCRIPTION:Purpose: Attend the 2025 Global Tech Summit
+DTEND:20250820T000000Z
+LOCATION:London
+DTSTART:20250820T000000Z
+SUMMARY:Business Travel to London
+UID:96e63db1-db3b-42c1-a2c2-bed510ffbcc2@96e6.org
+END:VEVENT
+END:VCALENDAR
