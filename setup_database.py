@@ -7,13 +7,13 @@ DB_FILE = os.path.join("data", "travel.db")
 # 确保 data 文件夹存在
 os.makedirs("data", exist_ok=True)
 
-# 连接到 SQLite 数据库 (如果文件不存在，则会创建)
+# Connect to SQLite database (if file doesn't exist, it will be created)
 conn = sqlite3.connect(DB_FILE)
 cursor = conn.cursor()
 
-# --- 创建表格 ---
+# --- Create tables ---
 
-# 1. 员工表 (employees)
+# 1. Employees table (employees)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS employees (
     employee_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS employees (
 );
 """)
 
-# 2. 差旅政策表 (travel_policies)
+# 2. Travel policies table (travel_policies)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS travel_policies (
     policy_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS travel_policies (
 );
 """)
 
-# 3. 差旅申请表 (travel_requests)
+# 3. Travel requests table (travel_requests)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS travel_requests (
     request_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS travel_requests (
 );
 """)
 
-# 4. 审批流程表 (approval_workflows)
+# 4. Approval workflows table (approval_workflows)
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS approval_workflows (
     workflow_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,16 +79,16 @@ CREATE TABLE IF NOT EXISTS approval_workflows (
 );
 """)
 
-# --- 插入示例数据 ---
+# --- Insert sample data ---
 
 try:
-    # 插入员工数据
+    # Insert employee data
     cursor.execute("INSERT INTO employees (email, first_name, last_name, department, job_level, manager_id, annual_travel_budget, remaining_budget) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                    ('manager@example.com', 'Manager', 'One', 'Sales', 'Manager', None, 10000, 10000))
     cursor.execute("INSERT INTO employees (email, first_name, last_name, department, job_level, manager_id, annual_travel_budget, remaining_budget) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                    ('employee@example.com', 'Employee', 'One', 'Sales', 'Junior', 1, 5000, 5000))
 
-    # 插入政策数据
+    # Insert policy data
     cursor.execute("INSERT INTO travel_policies (rule_name, description, limit_amount, applies_to_department, applies_to_job_level) VALUES (?, ?, ?, ?, ?)",
                    ('Flight Cost Cap', 'Business class for flights over 6 hours.', 1500, 'All', 'All'))
     cursor.execute("INSERT INTO travel_policies (rule_name, description, limit_amount, applies_to_department, applies_to_job_level) VALUES (?, ?, ?, ?, ?)",

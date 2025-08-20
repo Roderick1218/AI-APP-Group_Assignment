@@ -1,11 +1,12 @@
-# app.py (Golden Version - Final)
+# app.py (PostgreSQL Version)
 
 import os
-import sqlite3
 import streamlit as st
 import shutil
 from dotenv import load_dotenv
 from datetime import datetime
+import psycopg2
+from sqlalchemy import create_engine, text
 
 # --- IMPORTS FOR TOOLS ---
 from ics import Calendar, Event
@@ -28,7 +29,49 @@ if "GOOGLE_API_KEY" not in os.environ or not os.environ["GOOGLE_API_KEY"]:
     st.info("Please create a file named '.env' in the project root and add the following line: \n\nGOOGLE_API_KEY=\"YOUR_API_KEY\"")
     st.stop()
 
-DB_FILE = os.path.join("data", "travel.db")
+# PostgreSQL/Supabase Database Configuration with SQLite fallback
+USE_SQLITE_FALLBACK = os.getenv("USE_SQLITE_FALLBACK", "false").lower() == "true"
+DATABASE_URL = os.getenv("DATABASE")
+
+if not DATABASE_URL:
+    # Fallback to individual connection parameters
+    DB_HOST = os.getenv("DB_HOST", "localhost")
+    DB_PORT = os.getenv("DB_PORT", "5432")
+    DB_NAME = os.getenv("DB_NAME", "project")
+    DB_USER = os.getenv("DB_USER", "postgres")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "0183813235")
+    
+    # Create PostgreSQL connection string with SSL for Supabase
+    if "supabase" in DB_HOST.lower():
+        DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?sslmode=require"
+    else:
+        DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+# Test database connection and fallback to SQLite if needed
+def get_database_url():
+    if USE_SQLITE_FALLBACK:
+        print("Using SQLite fallback database...")
+        return "sqlite:///data/travel.db"
+    
+    try:
+        # Test PostgreSQL/Supabase connection
+        import psycopg2
+        if "sslmode" not in DATABASE_URL:
+            test_url = DATABASE_URL + "?sslmode=require" if "supabase" in DATABASE_URL else DATABASE_URL
+        else:
+            test_url = DATABASE_URL
+            
+        conn = psycopg2.connect(test_url)
+        conn.close()
+        print(f"Using PostgreSQL/Supabase database")
+        return DATABASE_URL
+    except Exception as e:
+        print(f"PostgreSQL connection failed: {e}")
+        print("Falling back to SQLite database...")
+        return "sqlite:///data/travel.db"
+
+DATABASE_URL = get_database_url()
+
 VECTOR_DB_PATH = os.path.join("data", "chroma_db_policy")
 CALENDAR_FILE = "trip_event.ics"
 
@@ -61,12 +104,16 @@ def create_calendar_event(summary: str, start_date_str: str, end_date_str: str, 
 def get_qa_chain():
     st.info("Initializing Policy Q&A Agent (using Google Gemini)...")
     
-    # Connect to database and get policies
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("SELECT rule_name, description FROM travel_policies")
-    policies = cursor.fetchall()
-    conn.close()
+    # Connect to PostgreSQL database and get policies
+    try:
+        engine = create_engine(DATABASE_URL)
+        with engine.connect() as conn:
+            result = conn.execute(text("SELECT rule_name, description FROM travel_policies"))
+            policies = result.fetchall()
+    except Exception as e:
+        st.error(f"Database connection failed: {e}")
+        st.info("Please ensure PostgreSQL is running and the database credentials are correct in your .env file")
+        st.stop()
     
     if not policies:
         st.error("No policies found in database! Please run setup_database.py first.")
@@ -187,7 +234,7 @@ Answer:"""
 @st.cache_resource
 def get_validation_agent():
     st.info("Initializing Request Validation Agent with Calendar Tool...")
-    db = SQLDatabase.from_uri(f"sqlite:///{DB_FILE}")
+    db = SQLDatabase.from_uri(DATABASE_URL)
     llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0)
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
     
