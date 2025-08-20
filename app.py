@@ -3,6 +3,7 @@
 import os
 import sqlite3
 import streamlit as st
+import shutil
 from dotenv import load_dotenv
 from datetime import datetime
 
@@ -58,19 +59,128 @@ def create_calendar_event(summary: str, start_date_str: str, end_date_str: str, 
 
 @st.cache_resource
 def get_qa_chain():
-    # This function is unchanged.
     st.info("Initializing Policy Q&A Agent (using Google Gemini)...")
+    
+    # Connect to database and get policies
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute("SELECT rule_name, description FROM travel_policies")
     policies = cursor.fetchall()
     conn.close()
-    policy_documents = [Document(page_content=f"Rule Name: {name}\nDescription: {desc}", metadata={"source": "database"}) for name, desc in policies]
+    
+    if not policies:
+        st.error("No policies found in database! Please run setup_database.py first.")
+        st.stop()
+    
+    st.info(f"Found {len(policies)} policies in database")
+    
+    # Create more detailed documents from policies
+    policy_documents = []
+    for name, desc in policies:
+        # Create comprehensive content for each policy
+        content = f"""Policy: {name}
+Description: {desc}
+Rule Name: {name}
+Details: {desc}
+Travel Policy: {name} - {desc}"""
+        
+        policy_documents.append(Document(
+            page_content=content,
+            metadata={"source": "database", "rule_name": name, "policy_type": "travel"}
+        ))
+    
+    st.info(f"Created {len(policy_documents)} policy documents for vector database")
+    
+    # Initialize embeddings
     embedding_function = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    vector_db = Chroma(persist_directory=VECTOR_DB_PATH, embedding_function=embedding_function)
-    retriever = vector_db.as_retriever()
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0, convert_system_message_to_human=True)
-    qa_chain = RetrievalQA.from_chain_type(llm=llm, chain_type="stuff", retriever=retriever)
+    
+    # Use the global VECTOR_DB_PATH
+    vector_db_path = VECTOR_DB_PATH
+    
+    # Check if vector database exists and try to load it, if fails recreate
+    try:
+        if os.path.exists(vector_db_path):
+            st.info("Attempting to load existing vector database...")
+            vector_db = Chroma(persist_directory=vector_db_path, embedding_function=embedding_function)
+            # Test if database works
+            test_results = vector_db.similarity_search("test policy", k=1)
+            if len(test_results) == 0:
+                raise Exception("Vector database is empty")
+            st.info("Successfully loaded existing vector database")
+        else:
+            raise Exception("Vector database doesn't exist")
+    except Exception as e:
+        st.info(f"Creating new vector database... ({str(e)})")
+        # Create new vector database in a different location first
+        temp_path = vector_db_path + "_temp"
+        if os.path.exists(temp_path):
+            try:
+                shutil.rmtree(temp_path)
+            except:
+                pass
+        
+        vector_db = Chroma.from_documents(
+            documents=policy_documents,
+            embedding=embedding_function,
+            persist_directory=temp_path
+        )
+        vector_db.persist()
+        
+        # Try to replace the old database
+        try:
+            if os.path.exists(vector_db_path):
+                shutil.rmtree(vector_db_path)
+            shutil.move(temp_path, vector_db_path)
+            st.info("Vector database created and moved to final location")
+        except:
+            # If moving fails, just use the temp location
+            vector_db_path = temp_path
+            st.info("Vector database created in temporary location")
+    
+    st.info("Vector database ready for use")
+    
+    # Create retriever with more documents returned
+    retriever = vector_db.as_retriever(search_kwargs={"k": 4})
+    
+    # Initialize LLM
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-1.5-flash", 
+        temperature=0.1,  # Slightly higher for more natural responses
+        convert_system_message_to_human=True
+    )
+    
+    # Create QA chain with custom prompt
+    from langchain.prompts import PromptTemplate
+    
+    prompt_template = """You are a helpful travel policy assistant. Use the following policy information to answer questions about travel policies.
+
+Context from travel policies:
+{context}
+
+Question: {question}
+
+Instructions:
+- Provide specific, helpful answers based on the policy information
+- If you find relevant policy information, cite the specific policy name
+- If the exact information isn't available, provide what you can from related policies
+- Be conversational and helpful
+- For meal allowances, refer to the "Meal Per Diem" policy if available
+
+Answer:"""
+
+    PROMPT = PromptTemplate(
+        template=prompt_template,
+        input_variables=["context", "question"]
+    )
+    
+    qa_chain = RetrievalQA.from_chain_type(
+        llm=llm,
+        chain_type="stuff",
+        retriever=retriever,
+        return_source_documents=True,
+        chain_type_kwargs={"prompt": PROMPT}
+    )
+    
     st.success("Policy Q&A Agent is ready!")
     return qa_chain
 
