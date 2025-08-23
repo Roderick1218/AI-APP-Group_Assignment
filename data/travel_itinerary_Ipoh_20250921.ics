@@ -1,0 +1,171 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:Enterprise Travel Management System
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM3\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250922T203000Z
+DTSTART:20250922T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 2
+UID:702efff5-b545-4496-9e5b-37a4f51cdaa5@702e.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT3H
+END:VALARM
+DESCRIPTION:\n✈️ RETURN FLIGHT INFORMATION:\n• Departure: Ipoh\n• Travel Class: Economy\n• Estimated Duration: 4 hours\n\n🎯 In-flight Tasks:\n• Trip summary notes\n• Action items review\n• Expense report draft\n• Follow-up planning\n\n📱 Post-arrival Tasks:\n• Confirm safe arrival\n• Submit travel completion report\n• Upload expense receipts\n• Schedule follow-up meetings\n
+DTEND:20250924T180000Z
+LOCATION:Ipoh Airport
+DTSTART:20250924T140000Z
+SUMMARY:🛬 Return Flight from Ipoh
+UID:6bd6744d-dec5-41d6-888e-af1bd6800654@6bd6.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT1H
+END:VALARM
+DESCRIPTION:\n📋 POST-TRAVEL TASKS:\n\n💼 Business Follow-up:\n• Send thank you emails to contacts\n• Share meeting outcomes with team\n• Update project status\n• Schedule follow-up meetings\n\n💰 Administrative Tasks:\n• Submit final expense report\n• Upload all receipts\n• Complete travel satisfaction survey\n• Update travel profile if needed\n\n📊 Reporting Requirements:\n• Trip summary report\n• Business outcomes achieved\n• Lessons learned\n• Recommendations for future trips\n\n⏰ Deadline: Complete within 5 business days\n
+DTEND:20250925T100000Z
+DTSTART:20250925T090000Z
+SUMMARY:📋 Post-Travel Follow-up: Ipoh
+UID:5f69fcc4-f1e5-4ee0-81da-10105ee1d0ba@5f69.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🏨 HOTEL INFORMATION:\n• Type: Standard Business Hotel\n• Location: Ipoh\n• Check-in: 3:00 PM\n• Check-out: 2025-09-24 11:00 AM\n\n📋 Check-in Tasks:\n• Confirm room amenities\n• WiFi setup for business\n• Review hotel services\n• Plan transportation to meetings\n\n💼 Hotel Business Center:\n• Printing services available\n• Meeting room bookings\n• Concierge assistance\n
+DTEND:20250921T160000Z
+LOCATION:Standard Business Hotel\, Ipoh
+DTSTART:20250921T150000Z
+SUMMARY:🏨 Hotel Check-in: Standard Business Hotel
+UID:513ee842-aea0-40ce-b7eb-f11d3f3f2c87@513e.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Client Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250922T170000Z
+LOCATION:Ipoh
+DTSTART:20250922T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 2
+UID:c9e9dec1-d586-4b5d-b4cc-2f721c6a9555@c9e9.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT1H
+END:VALARM
+DESCRIPTION:\n🧳 DEPARTURE CHECKLIST:\n• Check-in online (24h before)\n• Pack business attire for Client Meeting\n• Travel documents & ID\n• Phone chargers & adapters\n• Business cards & materials\n• Company laptop & charger\n\n📱 Final confirmations:\n• Flight status check\n• Ground transportation\n• Hotel reservation\n• First day meeting schedule\n
+DTEND:20250921T060000Z
+DTSTART:20250921T040000Z
+SUMMARY:✈️ Departure Preparation - Ipoh
+UID:fc5bc5f6-1682-4d6c-953b-59d29c294c46@fc5b.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM3\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250923T203000Z
+DTSTART:20250923T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 3
+UID:25904278-75d4-486a-ba46-47065d6a4d60@2590.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT2H
+END:VALARM
+DESCRIPTION:\n💰 EXPENSE REPORT FINAL SUBMISSION\n\n📊 Final Tasks:\n• Review all expense entries\n• Ensure all receipts uploaded\n• Verify total amounts\n• Submit for manager approval\n\n💼 Trip Summary Required:\n• Business objectives achieved\n• Total expenses: RM3\,000.00 budgeted\n• ROI and business value\n• Future recommendations\n\n⚠️ IMPORTANT: Expense reports must be submitted within 5 business days of return\n
+DTEND:20250929T173000Z
+DTSTART:20250929T170000Z
+SUMMARY:💰 Expense Report Deadline - Ipoh Trip
+UID:0823e54e-2325-4605-93cd-986270d2e864@0823.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Client Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250923T170000Z
+LOCATION:Ipoh
+DTSTART:20250923T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 3
+UID:a923d9e1-a639-48cb-81c0-fa2b13004765@a923.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n🏨 CHECK-OUT PROCESS:\n• Settle hotel bill\n• Collect all receipts\n• Confirm no items left behind\n• Arrange airport transportation\n\n📋 Final Business Tasks:\n• Send thank you emails\n• Confirm follow-up actions\n• Update travel status\n• Submit expense receipts\n\n💼 Travel Preparation:\n• Pack all materials\n• Charge devices for flight\n• Check flight status\n• Confirm departure gate\n
+DTEND:20250924T110000Z
+LOCATION:Standard Business Hotel\, Ipoh
+DTSTART:20250924T100000Z
+SUMMARY:🏨 Hotel Check-out & Final Preparations
+UID:42892907-62c1-4083-83cf-b02817941190@4289.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 2 - Business Schedule\n\n🎯 PURPOSE: Client Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Client Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250922T120000Z
+LOCATION:Ipoh
+DTSTART:20250922T090000Z
+SUMMARY:💼 Business Activities - Day 2
+UID:dff896c7-173e-430b-b95a-8ca090464529@dff8.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 3 - Business Schedule\n\n🎯 PURPOSE: Client Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Client Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250923T120000Z
+LOCATION:Ipoh
+DTSTART:20250923T090000Z
+SUMMARY:💼 Business Activities - Day 3
+UID:f1f82956-868e-41cf-b4d0-d1988ee7e35e@f1f8.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1W
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT2H
+END:VALARM
+DESCRIPTION:\n📋 BUSINESS TRAVEL DETAILS\n═══════════════════════════\n🎯 Purpose: Client Meeting\n✈️ Travel Class: Economy\n🏨 Hotel: Standard Business Hotel\n💰 Budget: RM3\,000.00\n👤 Employee: leeyongjun1218@e.newera.edu.my\n📞 Emergency: +1-800-TRAVEL-HELP\n\n🔔 IMPORTANT REMINDERS:\n• Passport & travel documents\n• Expense tracking app\n• Company credit card\n• Travel insurance confirmation\n• Emergency contact information\n\n💼 BUSINESS OBJECTIVES:\n• Review and confirm meeting schedules\n• Prepare presentation materials\n• Update travel expense reports daily\n• Submit final reports within 5 days of return\n
+DTEND:20250924T220000Z
+LOCATION:Ipoh
+DTSTART:20250921T060000Z
+SUMMARY:🏢 Business Travel: Ipoh
+UID:04279bdc-db93-41fd-b74f-99d446b8d687@0427.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT3H
+END:VALARM
+DESCRIPTION:\n✈️ FLIGHT INFORMATION:\n• Travel Class: Economy\n• Estimated Duration: 4 hours\n• Destination: Ipoh\n\n🎯 In-flight productivity:\n• Review meeting materials\n• Prepare presentation notes\n• Update project status\n• Plan daily schedule\n\n📱 Upon Arrival:\n• Confirm hotel check-in\n• Update arrival status to team\n• Set up local transportation\n
+DTEND:20250921T120000Z
+LOCATION:Airport Departure Terminal
+DTSTART:20250921T080000Z
+SUMMARY:🛫 Flight Departure to Ipoh
+UID:bc9e993f-a8aa-443c-89fd-576767c2844c@bc9e.org
+END:VEVENT
+END:VCALENDAR

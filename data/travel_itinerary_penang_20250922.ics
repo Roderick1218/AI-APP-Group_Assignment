@@ -1,0 +1,227 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:Enterprise Travel Management System
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT1H
+END:VALARM
+DESCRIPTION:\n🧳 DEPARTURE CHECKLIST:\n• Check-in online (24h before)\n• Pack business attire for Client Meeting\n• Travel documents & ID\n• Phone chargers & adapters\n• Business cards & materials\n• Company laptop & charger\n\n📱 Final confirmations:\n• Flight status check\n• Ground transportation\n• Hotel reservation\n• First day meeting schedule\n
+DTEND:20250922T060000Z
+DTSTART:20250922T040000Z
+SUMMARY:✈️ Departure Preparation - penang
+UID:d3cdbb09-febd-4683-850c-bc0daba4f131@d3cd.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 3 - Business Schedule\n\n🎯 PURPOSE: Client Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Client Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250924T120000Z
+LOCATION:penang
+DTSTART:20250924T090000Z
+SUMMARY:💼 Business Activities - Day 3
+UID:f76d88a3-c68b-43fb-8071-1d2d627b2404@f76d.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Client Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250925T170000Z
+LOCATION:penang
+DTSTART:20250925T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 4
+UID:63573bc9-e77f-44d3-bec9-08bca60994bd@6357.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Client Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250924T170000Z
+LOCATION:penang
+DTSTART:20250924T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 3
+UID:baafffbd-617c-4eab-b71b-49db94ca18cf@baaf.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM3\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250924T203000Z
+DTSTART:20250924T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 3
+UID:bd220970-4d36-4efa-a34e-79477e8f0976@bd22.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT1H
+END:VALARM
+DESCRIPTION:\n📋 POST-TRAVEL TASKS:\n\n💼 Business Follow-up:\n• Send thank you emails to contacts\n• Share meeting outcomes with team\n• Update project status\n• Schedule follow-up meetings\n\n💰 Administrative Tasks:\n• Submit final expense report\n• Upload all receipts\n• Complete travel satisfaction survey\n• Update travel profile if needed\n\n📊 Reporting Requirements:\n• Trip summary report\n• Business outcomes achieved\n• Lessons learned\n• Recommendations for future trips\n\n⏰ Deadline: Complete within 5 business days\n
+DTEND:20250928T100000Z
+DTSTART:20250928T090000Z
+SUMMARY:📋 Post-Travel Follow-up: penang
+UID:c83e0ef5-5b98-4a6d-bb99-bbf388070280@c83e.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 2 - Business Schedule\n\n🎯 PURPOSE: Client Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Client Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250923T120000Z
+LOCATION:penang
+DTSTART:20250923T090000Z
+SUMMARY:💼 Business Activities - Day 2
+UID:a5af90ba-c552-4abc-aac9-a66efb0bef66@a5af.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n🏨 CHECK-OUT PROCESS:\n• Settle hotel bill\n• Collect all receipts\n• Confirm no items left behind\n• Arrange airport transportation\n\n📋 Final Business Tasks:\n• Send thank you emails\n• Confirm follow-up actions\n• Update travel status\n• Submit expense receipts\n\n💼 Travel Preparation:\n• Pack all materials\n• Charge devices for flight\n• Check flight status\n• Confirm departure gate\n
+DTEND:20250927T110000Z
+LOCATION:Standard Business Hotel\, penang
+DTSTART:20250927T100000Z
+SUMMARY:🏨 Hotel Check-out & Final Preparations
+UID:5324c4a0-8b1d-4728-81ca-6b02b79b56ca@5324.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT3H
+END:VALARM
+DESCRIPTION:\n✈️ FLIGHT INFORMATION:\n• Travel Class: Economy\n• Estimated Duration: 4 hours\n• Destination: penang\n\n🎯 In-flight productivity:\n• Review meeting materials\n• Prepare presentation notes\n• Update project status\n• Plan daily schedule\n\n📱 Upon Arrival:\n• Confirm hotel check-in\n• Update arrival status to team\n• Set up local transportation\n
+DTEND:20250922T120000Z
+LOCATION:Airport Departure Terminal
+DTSTART:20250922T080000Z
+SUMMARY:🛫 Flight Departure to penang
+UID:336e3d94-2d4b-4cc0-b302-7f6f3280d3b7@336e.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM3\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250926T203000Z
+DTSTART:20250926T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 5
+UID:eaaeeffc-a2b1-427b-aa43-72e06ccf8548@eaae.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🏨 HOTEL INFORMATION:\n• Type: Standard Business Hotel\n• Location: penang\n• Check-in: 3:00 PM\n• Check-out: 2025-09-27 11:00 AM\n\n📋 Check-in Tasks:\n• Confirm room amenities\n• WiFi setup for business\n• Review hotel services\n• Plan transportation to meetings\n\n💼 Hotel Business Center:\n• Printing services available\n• Meeting room bookings\n• Concierge assistance\n
+DTEND:20250922T160000Z
+LOCATION:Standard Business Hotel\, penang
+DTSTART:20250922T150000Z
+SUMMARY:🏨 Hotel Check-in: Standard Business Hotel
+UID:c1693006-9d57-44a2-b734-931f3a7d95ac@c169.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM3\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250923T203000Z
+DTSTART:20250923T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 2
+UID:fca79140-bd18-4a12-868d-fc7825566f22@fca7.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Client Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250926T170000Z
+LOCATION:penang
+DTSTART:20250926T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 5
+UID:4cdda965-2bf1-4d02-b352-52a4af727518@4cdd.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 5 - Business Schedule\n\n🎯 PURPOSE: Client Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Client Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250926T120000Z
+LOCATION:penang
+DTSTART:20250926T090000Z
+SUMMARY:💼 Business Activities - Day 5
+UID:c5cd625b-68e8-43d1-8e60-059003a04d69@c5cd.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT2H
+END:VALARM
+DESCRIPTION:\n💰 EXPENSE REPORT FINAL SUBMISSION\n\n📊 Final Tasks:\n• Review all expense entries\n• Ensure all receipts uploaded\n• Verify total amounts\n• Submit for manager approval\n\n💼 Trip Summary Required:\n• Business objectives achieved\n• Total expenses: RM3\,000.00 budgeted\n• ROI and business value\n• Future recommendations\n\n⚠️ IMPORTANT: Expense reports must be submitted within 5 business days of return\n
+DTEND:20251002T173000Z
+DTSTART:20251002T170000Z
+SUMMARY:💰 Expense Report Deadline - penang Trip
+UID:31bab25a-7f4c-467b-a9fb-81c2292e1de3@31ba.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Client Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250923T170000Z
+LOCATION:penang
+DTSTART:20250923T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 2
+UID:73bec3e7-a8d0-499d-a5e9-0079c2b3a866@73be.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1W
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT2H
+END:VALARM
+DESCRIPTION:\n📋 BUSINESS TRAVEL DETAILS\n═══════════════════════════\n🎯 Purpose: Client Meeting\n✈️ Travel Class: Economy\n🏨 Hotel: Standard Business Hotel\n💰 Budget: RM3\,000.00\n👤 Employee: leeyongjun1218@e.newera.edu.my\n📞 Emergency: +1-800-TRAVEL-HELP\n\n🔔 IMPORTANT REMINDERS:\n• Passport & travel documents\n• Expense tracking app\n• Company credit card\n• Travel insurance confirmation\n• Emergency contact information\n\n💼 BUSINESS OBJECTIVES:\n• Review and confirm meeting schedules\n• Prepare presentation materials\n• Update travel expense reports daily\n• Submit final reports within 5 days of return\n
+DTEND:20250927T220000Z
+LOCATION:penang
+DTSTART:20250922T060000Z
+SUMMARY:🏢 Business Travel: penang
+UID:3e458a63-ca4b-487b-a23a-c5dfc6924d9f@3e45.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM3\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250925T203000Z
+DTSTART:20250925T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 4
+UID:a03caaee-c06e-452c-9999-1d94b63acdb7@a03c.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 4 - Business Schedule\n\n🎯 PURPOSE: Client Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Client Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250925T120000Z
+LOCATION:penang
+DTSTART:20250925T090000Z
+SUMMARY:💼 Business Activities - Day 4
+UID:a2b068be-ecf9-471d-828e-8c5e621cd5d3@a2b0.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT3H
+END:VALARM
+DESCRIPTION:\n✈️ RETURN FLIGHT INFORMATION:\n• Departure: penang\n• Travel Class: Economy\n• Estimated Duration: 4 hours\n\n🎯 In-flight Tasks:\n• Trip summary notes\n• Action items review\n• Expense report draft\n• Follow-up planning\n\n📱 Post-arrival Tasks:\n• Confirm safe arrival\n• Submit travel completion report\n• Upload expense receipts\n• Schedule follow-up meetings\n
+DTEND:20250927T180000Z
+LOCATION:penang Airport
+DTSTART:20250927T140000Z
+SUMMARY:🛬 Return Flight from penang
+UID:4df61d2d-9182-486f-9c4d-e34861998d33@4df6.org
+END:VEVENT
+END:VCALENDAR

@@ -1,13 +1,13 @@
 # app.py - AI-Powered Travel Policy Advisor (Google Gemini + Vector DB)
 """
 =======================================================================
-🏢 Enterprise Travel Policy Management System - Main Application
+🏢 Malaysian Enterprise Travel Policy Management System
 =======================================================================
 
 Core Function Modules (5 Requirements Implementation):
 1. Policy Query Interface - ChatGPT-style intelligent policy Q&A
-2. Request Validation - AI intelligent validation of travel request compliance
-3. Approval Workflow - Automated approval routing based on cost and department
+2. Submit Travel Request → AI validates against policies
+3. Routes for Approval → Creates calendar events → Sends confirmations  
 4. Travel Planning - Intelligent planning integrated with external travel information sources
 5. Calendar Integration - Automatic generation of travel schedules
 
@@ -16,36 +16,46 @@ Technical Architecture:
 • AI Engine: Google Gemini + ChromaDB Vector Database  
 • Database: PostgreSQL/Prisma with SQLAlchemy ORM
 • Calendar: ICS format automatic generation and download
+• Currency: Malaysian Ringgit (MYR)
+• Base Country: Malaysia
 
-Version: v2.0 - Enterprise Complete Solution
+Version: v2.0 - Malaysian Enterprise Complete Solution
 =======================================================================
 """
 
 import os
 import streamlit as st
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 import psycopg2
 from sqlalchemy import create_engine, text
+import re
+import json
+import requests
 
 # --- AI AND VECTOR DB IMPORTS ---
-from ics import Calendar, Event
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain.chains import RetrievalQA
-from langchain_community.vectorstores import Chroma
-from langchain.docstore.document import Document
+from ics import Calendar, Event, DisplayAlarm
 import chromadb
 import google.generativeai as genai
-from decimal import Decimal, ROUND_HALF_UP
-from datetime import datetime, timedelta
-import requests
-import json
 
 # --- CONFIGURATION ---
 load_dotenv()
 
 # Google API Key (optional). If missing, app falls back to local search.
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+# --- CURRENCY CONVERSION UTILITIES ---
+
+def ensure_rm_currency(text):
+    """Ensure all currency displays use RM instead of dollar signs"""
+    if not text or not isinstance(text, str):
+        return text
+    
+    # Replace dollar signs with RM using regex patterns
+    text = re.sub(r'\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)', r'RM\1', text)
+    text = re.sub(r'\$(\d+(?:\.\d{2})?)', r'RM\1', text)
+    
+    return text
 
 # PostgreSQL Database Configuration
 USE_ONLINE_DATABASE = os.getenv("USE_ONLINE_DATABASE", "true").lower() == "true"
@@ -133,9 +143,9 @@ Policy Category: {'accommodation' if 'hotel' in name.lower() or 'accommodation' 
         return [
             {
                 'rule_name': 'Hotel Accommodation Standards',
-                'description': 'Business travelers may book hotels up to $300/night in major cities, $200/night in other locations',
-                'content': 'Hotel Accommodation Standards - Business travelers may book hotels up to $300/night in major cities, $200/night in other locations',
-                'searchable_text': 'hotel accommodation standards business travelers book hotels $300 night major cities $200 locations'
+                'description': 'Business travelers may book hotels up to RM400/night for international travel, RM250/night for domestic Malaysia',
+                'content': 'Hotel Accommodation Standards - Business travelers may book hotels up to RM400/night for international travel, RM250/night for domestic Malaysia',
+                'searchable_text': 'hotel accommodation standards business travelers book hotels RM400 night international RM250 domestic malaysia'
             },
             {
                 'rule_name': 'Flight Class Policy', 
@@ -172,383 +182,261 @@ def initialize_ai_components():
         st.error(f"AI initialization failed: {e}")
         return None, None
 
-# --- ENHANCED AI REQUEST VALIDATION & OPTIMIZATION ---
+# --- SIMPLIFIED AI REQUEST VALIDATION ---
 def ai_validate_travel_request(destination, departure_date, return_date, estimated_cost, travel_class, purpose, employee_email, business_justification, policies, gemini_model=None):
     """
-    Enhanced AI-powered validation system that comprehensively checks requests against company policies
-    Returns: (is_valid: bool, errors: list[str], warnings: list[str], suggestions: list[str], compliance_score: float)
+    Simplified travel request validation system
+    Submit travel request → AI validates against policies → Routes for approval → Database insertion
     """
-    errors, warnings, suggestions = [], [], []
-    compliance_score = 100.0
+    import psycopg2
+    import os
+    from dotenv import load_dotenv
     
-    # === BASIC VALIDATION ===
-    # Date validation
-    if return_date <= departure_date:
-        errors.append("❌ Return date must be after departure date")
-        compliance_score -= 15
+    load_dotenv()
     
-    if departure_date <= datetime.now().date():
-        errors.append("❌ Departure date cannot be in the past")
-        compliance_score -= 10
-    
-    # Duration analysis
-    duration = (return_date - departure_date).days
-    if duration > 30:
-        warnings.append("⚠️ Trip duration exceeds 30 days - requires special long-term travel approval")
-        compliance_score -= 5
-    elif duration < 1:
-        errors.append("❌ Trip duration must be at least 1 day")
-        compliance_score -= 20
-    
-    # === DESTINATION-BASED POLICY VALIDATION ===
-    dest_lower = destination.lower()
-    
-    # International vs Domestic detection
-    international_destinations = [
-        'london', 'paris', 'tokyo', 'singapore', 'sydney', 'toronto', 'mumbai', 'beijing',
-        'madrid', 'rome', 'berlin', 'amsterdam', 'zurich', 'hong kong', 'dubai', 'bangkok'
-    ]
-    is_international = any(dest in dest_lower for dest in international_destinations)
-    
-    if is_international:
-        suggestions.append("🌍 International travel detected - ensure passport validity (6+ months)")
-        suggestions.append("🛡️ International travel insurance is mandatory")
-        suggestions.append("💉 Check vaccination requirements for destination")
-        if duration < 3:
-            warnings.append("⚠️ Short international trips may not be cost-effective")
-            compliance_score -= 3
-    
-    # === COST VALIDATION BY DESTINATION TIER ===
-    tier1_cities = ['london', 'tokyo', 'singapore', 'new york', 'san francisco', 'zurich', 'hong kong']
-    tier2_cities = ['manchester', 'osaka', 'kuala lumpur', 'chicago', 'boston', 'madrid', 'sydney']
-    
-    if dest_lower in tier1_cities:
-        tier = 1
-        daily_budget_cap = 600  # Tier 1: Premium cities
-        hotel_cap_per_night = 350
-    elif dest_lower in tier2_cities:
-        tier = 2
-        daily_budget_cap = 450  # Tier 2: Major cities
-        hotel_cap_per_night = 250
-    else:
-        tier = 3
-        daily_budget_cap = 350  # Tier 3: Other locations
-        hotel_cap_per_night = 200
-    
-    # Total cost validation
-    expected_total_cap = daily_budget_cap * duration
-    if estimated_cost > expected_total_cap * 1.3:  # 30% tolerance
-        errors.append(f"❌ Estimated cost (${estimated_cost:,.0f}) significantly exceeds policy limit (~${expected_total_cap:,.0f}) for {destination}")
-        compliance_score -= 20
-    elif estimated_cost > expected_total_cap:
-        warnings.append(f"⚠️ Cost (${estimated_cost:,.0f}) exceeds recommended budget (~${expected_total_cap:,.0f})")
-        compliance_score -= 8
-    
-    # Hotel cost validation
-    estimated_hotel_cost = estimated_cost * 0.5  # Assume 50% of total cost is accommodation
-    estimated_hotel_per_night = estimated_hotel_cost / duration
-    if estimated_hotel_per_night > hotel_cap_per_night * 1.2:
-        errors.append(f"❌ Hotel cost (~${estimated_hotel_per_night:.0f}/night) exceeds policy limit (${hotel_cap_per_night}/night)")
-        compliance_score -= 15
-    elif estimated_hotel_per_night > hotel_cap_per_night:
-        warnings.append(f"⚠️ Hotel cost may exceed recommended limit (${hotel_cap_per_night}/night)")
-        compliance_score -= 5
-    
-    # === TRAVEL CLASS VALIDATION ===
-    if travel_class in ['Business Class', 'First Class']:
-        if not is_international:
-            errors.append("❌ Business/First class only allowed for international flights")
-            compliance_score -= 25
-        elif duration < 6 and travel_class == 'Business Class':
-            warnings.append("⚠️ Business class typically approved for flights 6+ hours")
-            compliance_score -= 10
-        elif travel_class == 'First Class' and estimated_cost < 5000:
-            warnings.append("⚠️ First class requires executive approval for high-value trips")
-            compliance_score -= 15
-    
-    # === PURPOSE-BASED VALIDATION ===
-    purpose_lower = purpose.lower()
-    
-    if 'client' in purpose_lower or 'customer' in purpose_lower:
-        if estimated_cost > 3000:
-            suggestions.append("💼 High-value client meeting - ensure sales director approval")
-        suggestions.append("🤝 Client meeting - document expected business outcomes")
-    
-    if 'conference' in purpose_lower or 'training' in purpose_lower:
-        suggestions.append("📚 Training/Conference - HR notification required")
-        if duration > 5:
-            warnings.append("⚠️ Extended training trips require educational value justification")
-            compliance_score -= 5
-    
-    if 'vendor' in purpose_lower or 'supplier' in purpose_lower:
-        suggestions.append("🏭 Vendor meeting - document procurement business case")
-    
-    # === BUSINESS JUSTIFICATION ANALYSIS ===
-    if len(business_justification.strip()) < 50:
-        warnings.append("⚠️ Business justification appears brief - provide more detailed explanation")
-        compliance_score -= 10
-    
-    justification_lower = business_justification.lower()
-    business_keywords = ['revenue', 'sales', 'contract', 'client', 'opportunity', 'meeting', 'negotiation', 'partnership']
-    if not any(keyword in justification_lower for keyword in business_keywords):
-        warnings.append("⚠️ Business justification should clearly explain business value and objectives")
-        compliance_score -= 8
-    
-    # === TIMING VALIDATION ===
-    advance_notice = (departure_date - datetime.now().date()).days
-    if advance_notice < 7:
-        if advance_notice < 3:
-            warnings.append("⚠️ Less than 3 days notice - emergency approval required")
-            compliance_score -= 15
+    try:
+        # 1. Connect to database and get employee information
+        conn = psycopg2.connect(os.getenv('DATABASE_ONLINE'))
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT employee_id, first_name, last_name, department, job_level, 
+                   annual_travel_budget, remaining_budget, manager_id
+            FROM employees 
+            WHERE email = %s
+        """, (employee_email,))
+        
+        employee_data = cursor.fetchone()
+        if not employee_data:
+            return f"""
+# ❌ Employee Validation Failed
+
+**Error:** Employee not found in database
+**Email:** {employee_email}
+
+Please contact HR to verify your employee record.
+"""
+        
+        employee_id, first_name, last_name, department, job_level, annual_budget, remaining_budget, manager_id = employee_data
+        
+        # Convert Decimal types to float to avoid type errors
+        annual_budget = float(annual_budget) if annual_budget else 0.0
+        remaining_budget = float(remaining_budget) if remaining_budget else 0.0
+        
+        # 2. Basic validation
+        errors = []
+        warnings = []
+        
+        # Date validation
+        if return_date <= departure_date:
+            errors.append("Return date must be after departure date")
+        
+            errors.append("Departure date cannot be in the past")
+        
+        duration = (return_date - departure_date).days
+        
+        # Budget check
+        budget_ok = remaining_budget >= estimated_cost
+        
+        # Policy check
+        if estimated_cost > 15000:
+            errors.append("Cost exceeds RM15,000 company limit")
+        
+        if not budget_ok:
+            errors.append(f"Insufficient budget: RM{remaining_budget:.2f} remaining")
+        
+        # International travel check
+        domestic_cities = ['kuala lumpur', 'kl', 'johor bahru', 'penang', 'sabah', 'sarawak']
+        is_international = destination.lower() not in domestic_cities and 'malaysia' not in destination.lower()
+        
+        if is_international and estimated_cost > 8000:
+            warnings.append("International travel requires additional approvals")
+        
+        # 3. Determine approval level with department-specific rules
+        # Department-specific rules (MYR amounts)
+        department_rules = {
+            'Sales': {'threshold': 12000, 'requires_director': True},
+            'Information Technology': {'threshold': 8000, 'requires_director': False},
+            'Engineering': {'threshold': 8000, 'requires_director': False},
+            'Marketing': {'threshold': 10000, 'requires_director': True},
+            'Finance': {'threshold': 6000, 'requires_director': True},
+            'Human Resources': {'threshold': 6000, 'requires_director': False}
+        }
+        
+        dept_rule = department_rules.get(department, {'threshold': 8000, 'requires_director': True})
+        
+        # Apply department-specific thresholds
+        if estimated_cost <= 3000:
+            approval_level = 0  # Auto approval for small amounts only for senior levels
+            # But check if user is senior enough for auto approval
+            if job_level not in ['Director', 'VP', 'C-Level']:
+                approval_level = 1  # Manager approval for non-senior staff
+        elif estimated_cost <= dept_rule['threshold']:
+            approval_level = 1  # Manager approval within department limit
+        elif estimated_cost <= 15000:
+            approval_level = 2  # Director approval
         else:
-            warnings.append("⚠️ Less than 7 days notice - limited booking options and higher costs")
-            compliance_score -= 8
-    
-    # === POLICY-SPECIFIC VALIDATION ===
-    policy_violations = []
-    policy_compliance = []
-    
-    for policy in (policies or [])[:20]:  # Check top 20 policies
-        rule_name = policy.get('rule_name', '').lower()
-        description = policy.get('description', '').lower()
+            approval_level = 3  # Senior management approval
         
-        # Flight policy checks
-        if 'flight' in rule_name or 'class' in rule_name:
-            if 'business class' in description and travel_class == 'Business Class':
-                if 'international' in description and is_international:
-                    policy_compliance.append(f"✅ Business class approved for international travel")
-                elif 'domestic' in description and not is_international:
-                    policy_violations.append(f"❌ Business class not allowed for domestic flights per {policy['rule_name']}")
-                    compliance_score -= 15
+        # 4. Calculate compliance score
+        compliance_score = 100
+        if errors:
+            compliance_score -= len(errors) * 25
+        if warnings:
+            compliance_score -= len(warnings) * 10
         
-        # Hotel policy checks
-        if 'hotel' in rule_name or 'accommodation' in rule_name:
-            if '$300' in description and tier == 1:
-                policy_compliance.append(f"✅ Tier 1 city hotel policy compliant")
-            elif '$200' in description and tier in [2, 3]:
-                policy_compliance.append(f"✅ Hotel policy compliant for destination tier")
+        compliance_score = max(compliance_score, 0)
         
-        # Meal policy checks
-        if 'meal' in rule_name or 'per diem' in rule_name:
-            if '$75' in description or 'daily' in description:
-                expected_meal_cost = 75 * duration
-                if estimated_cost * 0.2 > expected_meal_cost * 1.3:  # Assume 20% for meals
-                    warnings.append(f"⚠️ Meal expenses may exceed per diem allowance")
-                    compliance_score -= 5
-    
-    # === AI-POWERED INTELLIGENT ANALYSIS ===
-    if gemini_model:
-        try:
-            ai_analysis_prompt = f"""
-Analyze this travel request for policy compliance and provide intelligent recommendations:
-
-Request Details:
-- Destination: {destination} (Tier {tier})
-- Duration: {duration} days
-- Cost: ${estimated_cost:,.2f}
-- Travel Class: {travel_class}
-- Purpose: {purpose}
-- International: {'Yes' if is_international else 'No'}
-- Business Justification: {business_justification[:200]}...
-
-Current Issues Found:
-- Errors: {len(errors)}
-- Warnings: {len(warnings)}
-
-Provide a brief analysis focusing on:
-1. Any additional policy concerns not caught by automated rules
-2. Cost optimization opportunities
-3. Risk assessment for this trip
-4. Approval likelihood based on business case
-
-Keep response under 150 words.
-"""
+        # 5. Determine final status based on approval level and compliance
+        if errors:
+            final_status = "❌ REJECTED"
+            status_code = "rejected"
+        else:
+            # Check if request needs manual approval based on approval level
+            if approval_level == 0:
+                # Auto approval only for senior staff with small amounts
+                if job_level in ['Director', 'VP', 'C-Level'] and estimated_cost <= 3000:
+                    final_status = "✅ APPROVED"
+                    status_code = "approved"
+                else:
+                    final_status = "⏳ PENDING APPROVAL"
+                    status_code = "pending"
+            elif approval_level >= 1:
+                # Requires manual approval
+                approval_types = {
+                    1: "Manager",
+                    2: "Director", 
+                    3: "Senior Management"
+                }
+                final_status = f"⏳ PENDING {approval_types.get(approval_level, 'APPROVAL')}"
+                status_code = "pending"
+            else:
+                final_status = "✅ APPROVED" if compliance_score >= 80 else "⚠️ NEEDS REVIEW"
+                status_code = "approved" if compliance_score >= 80 else "pending"
+        
+        # 6. Insert travel request into database
+        request_id = None
+        if status_code in ['approved', 'pending']:
+            cursor.execute("""
+                INSERT INTO travel_requests 
+                (employee_id, destination, departure_date, return_date, purpose, 
+                 estimated_cost, status, approval_level_required, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                RETURNING request_id
+            """, (employee_id, destination, departure_date, return_date, purpose, 
+                  estimated_cost, status_code, approval_level))
             
-            ai_response = gemini_model.generate_content(ai_analysis_prompt)
-            if ai_response and ai_response.text:
-                suggestions.append(f"🤖 AI Analysis: {ai_response.text}")
-        except Exception as e:
-            pass  # AI analysis is optional
-    
-    # === GENERATE OPTIMIZATION SUGGESTIONS ===
-    if estimated_cost > expected_total_cap * 0.8:  # If cost is high
-        suggestions.append(f"💡 Consider booking {advance_notice + 7} days earlier for better rates")
-        suggestions.append(f"🏨 Look for corporate partner hotels in {destination}")
-        if tier == 1:
-            suggestions.append("🚇 Use public transportation - excellent options in major cities")
-    
-    if travel_class in ['Business Class', 'First Class'] and duration < 8:
-        suggestions.append("✈️ Consider Premium Economy for shorter international flights")
-    
-    # === FINAL COMPLIANCE SCORE CALCULATION ===
-    compliance_score = max(0, min(100, compliance_score))  # Ensure 0-100 range
-    
-    # Determine overall validity
-    is_valid = len(errors) == 0 and compliance_score >= 70
-    
-    return is_valid, errors, warnings, suggestions, compliance_score, policy_compliance, policy_violations
+            request_id = cursor.fetchone()[0]
+            
+            # Create approval workflow
+            if approval_level > 0:
+                # Check if manager_id exists before inserting
+                if manager_id:
+                    cursor.execute("""
+                        INSERT INTO approval_workflows 
+                        (request_id, approver_id, approval_level, status, comments, created_at)
+                        VALUES (%s, %s, %s, 'pending', %s, NOW())
+                    """, (request_id, manager_id, approval_level, 'Awaiting approval'))
+                else:
+                    # Insert without approver_id if manager_id is null
+                    cursor.execute("""
+                        INSERT INTO approval_workflows 
+                        (request_id, approval_level, status, comments, created_at)
+                        VALUES (%s, %s, 'pending', %s, NOW())
+                    """, (request_id, approval_level, 'Awaiting approver assignment'))
+            
+            # Update remaining budget (if auto-approved)
+            if status_code == 'approved':
+                cursor.execute("""
+                    UPDATE employees 
+                    SET remaining_budget = remaining_budget - %s 
+                    WHERE employee_id = %s
+                """, (estimated_cost, employee_id))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # 7. Generate simplified report
+        next_steps = []
+        if status_code == 'approved':
+            next_steps.append("✅ Request approved - proceed with booking")
+        elif status_code == 'pending':
+            if approval_level == 1:
+                next_steps.append("⏳ Waiting for manager approval")
+            elif approval_level == 2:
+                next_steps.append("⏳ Waiting for director approval")
+            else:
+                next_steps.append("⏳ Waiting for senior management approval")
+        else:
+            next_steps.append("❌ Request rejected - contact HR for assistance")
+        
+        if is_international and status_code != 'rejected':
+            next_steps.append("🌍 International travel - check passport validity")
+            next_steps.append("�️ International travel insurance required")
+        
+        report = f"""
+# 🚀 Travel Request Validation Result
 
-def generate_validation_report(is_valid, errors, warnings, suggestions, compliance_score, policy_compliance, policy_violations, destination, estimated_cost):
-    """Generate a comprehensive validation report with AI insights"""
-    
-    # Determine compliance level
-    if compliance_score >= 90:
-        compliance_level = "🟢 EXCELLENT"
-        compliance_color = "#28a745"
-    elif compliance_score >= 75:
-        compliance_level = "🟡 GOOD"
-        compliance_color = "#ffc107"
-    elif compliance_score >= 60:
-        compliance_level = "🟠 NEEDS REVIEW"
-        compliance_color = "#fd7e14"
-    else:
-        compliance_level = "🔴 HIGH RISK"
-        compliance_color = "#dc3545"
-    
-    report = f"""
-## 🔍 AI VALIDATION REPORT
-
-### 📊 Compliance Overview
-**Overall Status:** {compliance_level}  
-**Compliance Score:** {compliance_score:.1f}/100  
-**Request Status:** {"✅ APPROVED" if is_valid else "❌ REQUIRES ATTENTION"}
+## {final_status}
+**Compliance Score: {compliance_score}/100** | **Request ID: {request_id or 'N/A'}**
 
 ---
 
-### 📋 Validation Results
-"""
-    
-    if errors:
-        report += f"""
-#### ❌ CRITICAL ISSUES ({len(errors)})
-"""
-        for error in errors:
-            report += f"- {error}\n"
-    
-    if warnings:
-        report += f"""
-#### ⚠️ WARNINGS ({len(warnings)})
-"""
-        for warning in warnings:
-            report += f"- {warning}\n"
-    
-    if policy_compliance:
-        report += f"""
-#### ✅ POLICY COMPLIANCE ({len(policy_compliance)})
-"""
-        for compliance in policy_compliance:
-            report += f"- {compliance}\n"
-    
-    if policy_violations:
-        report += f"""
-#### 🚫 POLICY VIOLATIONS ({len(policy_violations)})
-"""
-        for violation in policy_violations:
-            report += f"- {violation}\n"
-    
-    if suggestions:
-        report += f"""
-#### 💡 RECOMMENDATIONS ({len(suggestions)})
-"""
-        for suggestion in suggestions:
-            report += f"- {suggestion}\n"
-    
-    report += f"""
----
+## 👤 Employee Information
+- **Name:** {first_name} {last_name}
+- **Department:** {department}
+- **Job Level:** {job_level}
 
-### 📈 Cost Analysis
-- **Estimated Total:** ${estimated_cost:,.2f}
-- **Destination:** {destination}
-- **Cost Efficiency:** {"High" if compliance_score >= 80 else "Medium" if compliance_score >= 60 else "Low"}
+## 💰 Budget Analysis
+- **Annual Budget:** RM{annual_budget:,.2f}
+- **Remaining Budget:** RM{remaining_budget:,.2f}
+- **Request Amount:** RM{estimated_cost:,.2f}
+- **Budget Status:** {'✅ Within Budget' if budget_ok else '❌ Exceeds Budget'}
+- **Budget Utilization:** {((annual_budget - remaining_budget + estimated_cost) / annual_budget * 100):.1f}%
 
+## 📋 Validation Results"""
+        
+        if errors:
+            report += f"""
+### ❌ Issues Found ({len(errors)})
+"""
+            for error in errors:
+                report += f"- {error}\n"
+        
+        if warnings:
+            report += f"""
+### ⚠️ Warnings ({len(warnings)})
+"""
+            for warning in warnings:
+                report += f"- {warning}\n"
+        
+        report += f"""
 ### 🎯 Next Steps
 """
-    
-    if is_valid:
-        report += """- ✅ Request meets policy requirements
-- 📋 Submit for approval workflow
-- 📅 Calendar integration available
-- 💼 Proceed with booking after approval"""
-    else:
-        report += """- ❌ Address critical issues before submission
-- 📝 Revise business justification if needed
-- 💰 Consider cost optimization suggestions
-- 🔄 Re-validate after corrections"""
-    
-    return report
+        for step in next_steps:
+            report += f"- {step}\n"
+        
+        report += f"""
+---
+### 📋 Trip Details
+- **Destination:** {destination}
+- **Duration:** {duration} days
+- **Purpose:** {purpose}
+- **Approval Level Required:** {approval_level}
+"""
+        
+        return report
+        
+    except Exception as e:
+        return f"""
+# ❌ System Error
 
-def validate_travel_request(destination, departure_date, return_date, estimated_cost, policies):
-    """Legacy validation function - maintained for backward compatibility"""
-    errors, warnings = [] , []
-    # Date sanity
-    if return_date <= departure_date:
-        errors.append("Return date must be after departure date.")
-    # Duration
-    duration = (return_date - departure_date).days
-    if duration > 30:
-        warnings.append("Trip duration exceeds 30 days; long-term travel requires special approval.")
-    # Cost caps heuristic by tier (align with get_cost_estimates tiers)
-    dest = destination.lower()
-    tier1 = ['london', 'tokyo', 'singapore', 'new york', 'san francisco']
-    tier2 = ['manchester', 'osaka', 'kuala lumpur', 'chicago', 'boston']
-    tier = 1 if dest in tier1 else 2 if dest in tier2 else 3
-    daily_caps = {1: 600, 2: 450, 3: 350}  # rough cap per day
-    cap = daily_caps[tier] * max(1, duration)
-    if estimated_cost > cap * 1.5:  # allow 50% margin
-        warnings.append(f"Estimated cost (${estimated_cost:,.0f}) significantly exceeds typical cap (~${cap:,.0f}).")
-    # Pull explicit policy hints
-    for p in (policies or [])[:15]:
-        textp = f"{p.get('rule_name','')} {p.get('description','')}".lower()
-        if 'business class' in textp and duration < 6:
-            warnings.append("Business class usually allowed for 6+ hour flights only.")
-            break
-    return len(errors) == 0, errors, warnings
+**Error:** {str(e)}
+**Employee:** {employee_email}
 
-def suggest_cost_optimizations(destination, travel_info, estimated_cost, duration_days):
-    """Return simple cost optimization suggestions with potential savings."""
-    suggestions = []
-    costs = travel_info.get('estimated_costs', {})
-    hotel = float(costs.get('accommodation', 0))
-    meals = float(costs.get('meals', 0))
-    transport = float(costs.get('local_transport', 0))
-    # Hotel: suggest business district nearby or tier down
-    if hotel > 0:
-        suggestions.append({
-            'area': 'Accommodation',
-            'tip': 'Consider hotels slightly outside prime business districts or corporate rates.',
-            'saving': round(hotel * 0.15, 2)
-        })
-    # Meals: per diem respect
-    if meals > 0:
-        suggestions.append({
-            'area': 'Meals',
-            'tip': 'Use company per-diem restaurants or hotel breakfast inclusions.',
-            'saving': round(meals * 0.10, 2)
-        })
-    # Transport: public transit
-    if transport > 0:
-        suggestions.append({
-            'area': 'Transport',
-            'tip': 'Use public transit pass or ride-share pooling when feasible.',
-            'saving': round(transport * 0.20, 2)
-        })
-    # Flight: off-peak
-    suggestions.append({
-        'area': 'Flights',
-        'tip': 'Choose off-peak flight times or 1-stop within policy to reduce airfare.',
-        'saving': round(estimated_cost * 0.08, 2)
-    })
-    total_saving = sum(s['saving'] for s in suggestions)
-    return suggestions, total_saving
-
-def log_policy_interaction(event_type, payload):
-    """Persist lightweight learning logs for future policy improvements."""
-    try:
-        line = json.dumps({'ts': datetime.now().isoformat(), 'type': event_type, 'data': payload}, ensure_ascii=False)
-        with open('policy_learning_log.jsonl', 'a', encoding='utf-8') as f:
-            f.write(line + "\n")
-    except Exception:
-        pass
+Please try again or contact system administrator.
+"""
 
 def populate_vector_database(policies, collection):
     """Enhanced vector database population with better embeddings and metadata"""
@@ -625,236 +513,189 @@ Common Questions:
 def ai_policy_search(query, policies, gemini_model, policy_collection):
     """Enhanced AI-powered policy search using Gemini with intelligent conversation"""
     try:
-        # Fallback to local search if AI components not available
+        # Fallback to smart local search if AI components not available
         if not gemini_model or not policy_collection:
             return smart_policy_search(query, policies)
+        
+        # Try to search vector database for semantic relevance
+        try:
+            results = policy_collection.query(
+                query_texts=[query],
+                n_results=8  # Get more results for comprehensive context
+            )
             
-        # Search vector database for relevant policies
-        results = policy_collection.query(
-            query_texts=[query],
-            n_results=5  # Get more results for better context
-        )
+            if results['documents'] and results['documents'][0]:
+                # Combine vector search results with filtered policies
+                vector_policies = results['documents'][0]
+                relevant_policy_text = "\n".join([f"• {doc}" for doc in vector_policies])
+            else:
+                relevant_policy_text = ""
+        except:
+            relevant_policy_text = ""
         
-        if not results['documents'] or not results['documents'][0]:
-            return smart_policy_search(query, policies)
+        # Prepare comprehensive context from filtered policies
+        filtered_context = ""
+        for i, policy in enumerate(policies[:10], 1):  # Top 10 filtered policies
+            filtered_context += f"{i}. **{policy['rule_name']}**: {policy['description']}\n\n"
         
-        # Prepare enhanced context for Gemini
-        relevant_policies = results['documents'][0]
-        
-        # Also include some general policies for context
-        general_context = ""
-        for policy in policies[:10]:  # Include top policies for broader context
-            general_context += f"• {policy['rule_name']}: {policy['description']}\n"
-        
-        # Create comprehensive prompt for intelligent conversation
-        prompt = f"""You are an intelligent travel policy assistant for a company. Your role is to provide helpful, conversational, and accurate responses about travel policies.
+        # Create advanced prompt for detailed, conversational response
+        prompt = f"""You are an expert Travel Policy Assistant for a Malaysian enterprise company. Your role is to provide comprehensive, helpful, and actionable guidance about travel policies.
 
-CONVERSATION STYLE:
-- Be friendly and professional, like a helpful HR representative
-- Use natural language and explain things clearly
-- If you don't know something specific, suggest what the employee should do
-- Provide practical examples when helpful
-- Use emojis appropriately to make responses engaging
+IMPORTANT CURRENCY GUIDELINES:
+• ALWAYS use Malaysian Ringgit (RM) for ALL monetary amounts
+• NEVER use dollar signs ($) - convert any USD amounts to RM
+• Example: Instead of $200, use RM300; Instead of $3000, use RM12000
+• All cost limits and budgets should be in RM currency
 
-AVAILABLE TRAVEL POLICIES:
-{chr(10).join([f"• {doc}" for doc in relevant_policies])}
-
-ADDITIONAL COMPANY POLICIES FOR CONTEXT:
-{general_context}
+RESPONSE GUIDELINES:
+• Be conversational and professional, like an experienced HR specialist
+• Provide specific details from the policies when available
+• Use clear formatting with bullet points and sections when helpful
+• Include practical examples and scenarios with RM amounts
+• If information is incomplete, guide the employee on next steps
+• Use appropriate emojis to make responses engaging but professional
+• Always end with helpful suggestions for follow-up questions
 
 EMPLOYEE QUESTION: "{query}"
 
-Please provide a helpful, conversational response based on the policies above. If the question relates to policies not covered above, you can:
-1. Provide general guidance based on typical corporate travel policies
-2. Suggest who they should contact for specific questions
-3. Explain what information they might need to provide
+RELEVANT COMPANY TRAVEL POLICIES:
+{filtered_context}
 
-Make your response practical and actionable."""
+ADDITIONAL SEMANTIC SEARCH RESULTS:
+{relevant_policy_text}
 
-        # Generate response with Gemini
+RESPONSE STRUCTURE:
+1. Direct answer to the question
+2. Relevant policy details with specific limits/requirements (in RM)
+3. Practical examples or scenarios (using RM amounts)
+4. Any important exceptions or special cases
+5. Next steps or who to contact for additional help
+6. Suggested follow-up questions
+
+Please provide a comprehensive, well-structured response that fully addresses the employee's question based on the company policies above. Remember to use only RM currency throughout your response."""
+
+        # Generate detailed response with Gemini
         response = gemini_model.generate_content(prompt)
         
         if response and response.text:
-            return f"🤖 **AI Assistant:**\n\n{response.text}\n\n💡 *Need more specific details? Try asking about particular aspects like costs, approval process, or booking requirements.*"
+            # Format the AI response with proper structure
+            ai_response = response.text.strip()
+            
+            # 🇲🇾 Ensure all currency displays use RM
+            ai_response = ensure_rm_currency(ai_response)
+            
+            # Add helpful footer
+            footer = f"\n\n---\n💡 **Need more help?**\n• Ask about specific cost limits\n• Inquire about approval processes\n• Request examples for your situation\n• Contact HR at hr@company.com for policy clarifications"
+            
+            return f"🤖 **AI Travel Policy Assistant:**\n\n{ai_response}{footer}"
         else:
             return smart_policy_search(query, policies)
             
     except Exception as e:
-        st.warning(f"AI search temporarily unavailable, using local search: {e}")
+        print(f"AI search error: {e}")
+        # Always fall back to local search if AI fails
         return smart_policy_search(query, policies)
 
 def answer_policy_question(question):
-    """Policy Q&A function using database search and AI assistant"""
+    """Enhanced Policy Q&A function using intelligent database search and AI assistant"""
     try:
         if not question or not question.strip():
-            return "Question cannot be empty."
+            return "❓ Please ask me a question about travel policies. For example: 'What are the hotel cost limits?' or 'When can I book business class?'"
         
         # Load policies from database
         policies = load_policies()
         if not policies:
-            return "No policies found in database."
+            return "❌ No policies found in database. Please contact your HR department."
         
-        # Filter relevant policies based on question keywords
-        q_lower = question.lower()
+        # Enhanced keyword-based policy filtering
+        q_lower = question.lower().strip()
         relevant_policies = []
         
-        for policy in policies:
-            rule_name = policy.get('rule_name', '').lower()
-            description = policy.get('description', '').lower()
-            
-            if (q_lower in rule_name or q_lower in description or 
-                any(keyword in rule_name or keyword in description 
-                    for keyword in q_lower.split())):
-                relevant_policies.append(policy)
+        # Advanced keyword mapping for better policy matching
+        keyword_categories = {
+            'flight': ['flight', 'fly', 'airplane', 'plane', 'air', 'airline', 'business class', 'economy', 'first class', 'cabin', 'seat', 'upgrade'],
+            'hotel': ['hotel', 'accommodation', 'room', 'stay', 'lodging', 'night', 'nightly', 'resort', 'hostel', 'motel'],
+            'meal': ['meal', 'food', 'dining', 'restaurant', 'eat', 'breakfast', 'lunch', 'dinner', 'allowance', 'per diem', 'diem'],
+            'approval': ['approval', 'approve', 'manager', 'supervisor', 'permission', 'authorization', 'sign off', 'director', 'vp'],
+            'international': ['international', 'overseas', 'abroad', 'foreign', 'visa', 'passport', 'customs', 'immigration'],
+            'transportation': ['transport', 'taxi', 'uber', 'lyft', 'car', 'rental', 'train', 'bus', 'ground'],
+            'cost': ['cost', 'price', 'money', 'budget', 'expense', 'limit', 'maximum', 'minimum', 'cheap', 'expensive', 'fee'],
+            'emergency': ['emergency', 'urgent', 'crisis', 'immediate', 'asap', 'rush', 'last minute'],
+            'conference': ['conference', 'training', 'seminar', 'workshop', 'meeting', 'event', 'summit']
+        }
         
-        # If no specific matches, use top policies
+        # Find relevant policies using enhanced matching
+        question_keywords = q_lower.split()
+        matched_categories = set()
+        
+        # Identify which categories the question relates to
+        for category, keywords in keyword_categories.items():
+            if any(keyword in q_lower for keyword in keywords):
+                matched_categories.add(category)
+        
+        # Score policies based on relevance
+        policy_scores = []
+        for policy in policies:
+            score = 0
+            policy_text = f"{policy.get('rule_name', '')} {policy.get('description', '')}".lower()
+            
+            # Category matching
+            for category in matched_categories:
+                if any(keyword in policy_text for keyword in keyword_categories[category]):
+                    score += 10
+            
+            # Direct keyword matching
+            for keyword in question_keywords:
+                if len(keyword) > 2:  # Ignore very short words
+                    if keyword in policy_text:
+                        score += 5
+            
+            # Exact phrase matching
+            if q_lower in policy_text:
+                score += 15
+            
+            if score > 0:
+                policy_scores.append((policy, score))
+        
+        # Sort by relevance score and take top matches
+        policy_scores.sort(key=lambda x: x[1], reverse=True)
+        relevant_policies = [policy for policy, score in policy_scores[:8]]  # Top 8 most relevant
+        
+        # If no specific matches found, provide intelligent fallback
         if not relevant_policies:
-            relevant_policies = policies[:5]
+            # Try partial matching for common question patterns
+            fallback_patterns = {
+                'what': policies[:3],  # General what questions
+                'how': policies[:3],   # How-to questions
+                'can i': policies[:2], # Permission questions
+                'cost': [p for p in policies if any(word in p.get('description', '').lower() 
+                        for word in ['cost', 'limit', 'allowance', 'budget'])],
+                'approve': [p for p in policies if 'approval' in p.get('description', '').lower()]
+            }
+            
+            for pattern, fallback_policies in fallback_patterns.items():
+                if pattern in q_lower and fallback_policies:
+                    relevant_policies = fallback_policies[:3]
+                    break
+            
+            if not relevant_policies:
+                relevant_policies = policies[:5]  # Ultimate fallback
         
         # Initialize AI components
         gemini_model, policy_collection = initialize_ai_components()
         
-        # Use AI search with filtered policies
+        # Use enhanced AI search with filtered policies
         return ai_policy_search(question, relevant_policies, gemini_model, policy_collection)
         
     except Exception as e:
-        return f"Service temporarily unavailable: {str(e)}"
+        return f"🔧 Service temporarily unavailable: {str(e)}\n\n💡 **Tip:** Try rephrasing your question or contact HR for assistance."
 
 # --- APPROVAL WORKFLOW SYSTEM ---
-def get_approval_workflow(employee_data, estimated_cost, destination, purpose):
-    """Determine approval workflow based on cost, department, and travel type"""
-    employee_id, first_name, last_name, job_level, remaining_budget, department = employee_data
-    
-    workflow_steps = []
-    approval_rules = []
-    
-    # Department-specific rules
-    department_rules = {
-        'Sales': {'threshold': 5000, 'requires_director': True},
-        'Engineering': {'threshold': 3000, 'requires_director': False},
-        'Marketing': {'threshold': 4000, 'requires_director': True},
-        'Finance': {'threshold': 2000, 'requires_director': True},
-        'HR': {'threshold': 2500, 'requires_director': False}
-    }
-    
-    dept_rule = department_rules.get(department, {'threshold': 3000, 'requires_director': True})
-    
-    # International travel check
-    international_destinations = ['london', 'paris', 'tokyo', 'singapore', 'sydney', 'toronto', 'mumbai', 'beijing']
-    is_international = any(dest in destination.lower() for dest in international_destinations) or \
-                      destination.lower() not in ['usa', 'united states', 'domestic']
-    
-    # Determine approval levels
-    if estimated_cost <= 1000 and not is_international:
-        # Level 1: Manager only
-        workflow_steps.append({
-            'level': 1,
-            'approver_type': 'Manager',
-            'department': department,
-            'auto_approve': job_level in ['Director', 'VP', 'C-Level']
-        })
-        approval_rules.append("✅ Low-cost domestic travel - Manager approval only")
-        
-    elif estimated_cost <= dept_rule['threshold'] and not is_international:
-        # Level 2: Manager + Department Head
-        workflow_steps.extend([
-            {'level': 1, 'approver_type': 'Manager', 'department': department},
-            {'level': 2, 'approver_type': 'Director', 'department': department}
-        ])
-        approval_rules.append(f"⚠️ Medium-cost travel - Requires {department} department approval")
-        
-    elif is_international or estimated_cost > dept_rule['threshold']:
-        # Level 3: Full approval chain
-        workflow_steps.extend([
-            {'level': 1, 'approver_type': 'Manager', 'department': department},
-            {'level': 2, 'approver_type': 'Director', 'department': department},
-            {'level': 3, 'approver_type': 'VP', 'department': 'Executive'}
-        ])
-        approval_rules.append("🔴 High-cost/International travel - Full approval chain required")
-        
-        # Additional requirements for international
-        if is_international:
-            approval_rules.extend([
-                "📋 International travel checklist required",
-                "🛂 Passport validity check (6+ months)",
-                "💉 Vaccination requirements review",
-                "🛡️ Travel insurance mandatory"
-            ])
-    
-    # Special rules for certain purposes
-    if 'conference' in purpose.lower() or 'training' in purpose.lower():
-        approval_rules.append("📚 Training/Conference - HR notification required")
-        
-    if 'client' in purpose.lower() or 'customer' in purpose.lower():
-        approval_rules.append("🤝 Client meeting - Sales director notification")
-    
-    return workflow_steps, approval_rules
-
-def create_approval_workflow(request_id, workflow_steps, connection):
-    """Create approval workflow records in database"""
-    for step in workflow_steps:
-        # Find appropriate approver (simplified - in real system would use proper org chart)
-        approver_query = """
-            SELECT employee_id, first_name, last_name, email 
-            FROM employees 
-            WHERE job_level = :approver_type 
-            AND department = :department 
-            LIMIT 1
-        """
-        
-        try:
-            approver_result = connection.execute(
-                text(approver_query),
-                {
-                    'approver_type': step['approver_type'],
-                    'department': step['department']
-                }
-            )
-            approver = approver_result.fetchone()
-            
-            if approver:
-                approver_id, approver_name, approver_lastname, approver_email = approver
-                
-                # Auto-approve if employee has sufficient authority
-                status = 'approved' if step.get('auto_approve', False) else 'pending'
-                comments = 'Auto-approved based on authority level' if status == 'approved' else 'Awaiting approval'
-                
-                connection.execute(
-                    text("""
-                        INSERT INTO approval_workflows 
-                        (request_id, approval_level, approver_id, status, comments, created_at) 
-                        VALUES (:req_id, :level, :approver_id, :status, :comments, NOW())
-                    """),
-                    {
-                        'req_id': request_id,
-                        'level': step['level'],
-                        'approver_id': approver_id,
-                        'status': status,
-                        'comments': comments
-                    }
-                )
-            else:
-                # Create workflow without specific approver (to be assigned later)
-                connection.execute(
-                    text("""
-                        INSERT INTO approval_workflows 
-                        (request_id, approval_level, status, comments, created_at) 
-                        VALUES (:req_id, :level, 'pending', 'Awaiting approver assignment', NOW())
-                    """),
-                    {
-                        'req_id': request_id,
-                        'level': step['level']
-                    }
-                )
-        except Exception as e:
-            st.warning(f"Could not assign approver for level {step['level']}: {e}")
-
 # --- TRAVEL PLANNING SYSTEM ---
 def get_travel_information(destination, departure_date, return_date):
     """Get comprehensive travel information for destination"""
     travel_info = {
         'destination_info': {},
-        'weather_forecast': {},
         'travel_advisories': {},
         'currency_info': {},
         'time_zone': {},
@@ -864,9 +705,6 @@ def get_travel_information(destination, departure_date, return_date):
     try:
         # Destination information
         travel_info['destination_info'] = get_destination_info(destination)
-        
-        # Weather forecast
-        travel_info['weather_forecast'] = get_weather_forecast(destination, departure_date)
         
         # Travel advisories and safety
         travel_info['travel_advisories'] = get_travel_advisories(destination)
@@ -936,21 +774,6 @@ def get_destination_info(destination):
         'transportation': 'Check local transport options',
         'business_districts': 'Research main business areas'
     })
-
-def get_weather_forecast(destination, departure_date):
-    """Get weather forecast for travel dates"""
-    # Simplified weather data (in real app would use weather API)
-    weather_data = {
-        'temperature_range': '15-25°C',
-        'conditions': 'Partly cloudy',
-        'precipitation': '20% chance of rain',
-        'recommendations': [
-            'Pack light jacket for evenings',
-            'Umbrella recommended',
-            'Business attire suitable'
-        ]
-    }
-    return weather_data
 
 def get_travel_advisories(destination):
     """Get travel advisories and safety information"""
@@ -1024,170 +847,118 @@ def get_cost_estimates(destination, departure_date, return_date):
     
     return estimates
 
-# --- CALENDAR INTEGRATION SYSTEM ---
-def create_comprehensive_travel_calendar(request_data, travel_info):
-    """Create comprehensive travel calendar with all events"""
-    try:
-        calendar = Calendar()
-        
-        destination = request_data['destination']
-        departure_date = request_data['departure_date']
-        return_date = request_data['return_date']
-        purpose = request_data['purpose']
-        
-        # Main travel event
-        main_event = Event()
-        main_event.name = f"Business Travel: {destination}"
-        main_event.description = f"""
-Purpose: {purpose}
+def generate_ai_travel_plan(gemini_model, destination, departure_date, return_date, estimated_cost, policies, purpose, travel_class, hotel_preference):
+    """Generates an intelligent travel plan using the Gemini AI model, referencing answer_policy_question's logic and enforcing RM currency. Now includes hotel_preference for hotel comparison."""
+    if not gemini_model:
+        return "Travel Planning AI is currently unavailable."
 
-Travel Information:
+    # Build a summary of the most relevant policies for context
+    policy_summary = ""
+    for policy in (policies or [])[:10]:
+        policy_summary += f"- {policy.get('rule_name', '')}: {policy.get('description', '')}\n"
+
+    # Compose a comprehensive prompt, inspired by answer_policy_question, now with hotel_preference
+    prompt = f"""
+You are an expert Corporate Travel Planner for a Malaysian enterprise. Your job is to generate a detailed, policy-compliant travel plan for the following request, strictly using Malaysian Ringgit (RM/MYR) for all monetary values. Do not use dollar signs ($) or any other currency.
+
+---
+EMPLOYEE TRAVEL REQUEST:
 - Destination: {destination}
-- Country: {travel_info['destination_info'].get('country', 'N/A')}
-- Currency: {travel_info['destination_info'].get('currency', 'N/A')}
-- Language: {travel_info['destination_info'].get('language', 'N/A')}
-- Business Hours: {travel_info['destination_info'].get('business_hours', 'N/A')}
+- Departure Date: {departure_date.strftime('%Y-%m-%d') if hasattr(departure_date, 'strftime') else departure_date}
+- Return Date: {return_date.strftime('%Y-%m-%d') if hasattr(return_date, 'strftime') else return_date}
+- Estimated Cost: RM {estimated_cost:,.2f}
+- Purpose: {purpose}
+- Travel Class: {travel_class}
+- Hotel Preference: {hotel_preference}
 
-Estimated Costs:
-- Accommodation: ${travel_info['estimated_costs'].get('accommodation', 0):.2f}
-- Meals: ${travel_info['estimated_costs'].get('meals', 0):.2f}
-- Local Transport: ${travel_info['estimated_costs'].get('local_transport', 0):.2f}
-- Total Estimate: ${travel_info['estimated_costs'].get('total_estimate', 0):.2f}
+---
+COMPANY TRAVEL POLICIES (summarized):
+{policy_summary}
 
-Weather: {travel_info['weather_forecast'].get('conditions', 'Check forecast')}
-Temperature: {travel_info['weather_forecast'].get('temperature_range', 'N/A')}
+---
+RESPONSE GUIDELINES:
+1. All prices and cost estimates must be in Malaysian Ringgit (RM/MYR) only.
+2. Provide realistic, recent market-based price ranges for flights and hotels (simulate searching AirAsia, Malaysia Airlines, Agoda, Booking.com, etc.).
+3. All flight options must match the requested travel class: "{travel_class}". If not possible, explain why and suggest the closest compliant alternatives.
+4. For hotels, compare and recommend options based on the user's hotel preference: "{hotel_preference}". If no exact match, show the closest alternatives and explain.
+5. Clearly state if any options violate company policy or budget, and explain the reason.
+6. For each flight and hotel, show a comparison table with price range, booking website, and a note about the price basis (e.g., "Based on fares in the last 6 months").
+7. Summarize travel advisory and visa requirements for Malaysians visiting {destination}, referencing the [Malaysian MFA](https://www.kln.gov.my/) and the official {destination} embassy site.
+8. Output must be in clean, readable Markdown. Do not add extra explanations or commentary outside the plan.
 
-Cultural Notes: {travel_info['destination_info'].get('cultural_notes', 'N/A')}
-Transportation: {travel_info['destination_info'].get('transportation', 'N/A')}
-        """
-        main_event.begin = departure_date
-        main_event.end = return_date
-        main_event.location = destination
-        calendar.events.add(main_event)
-        
-        # Pre-travel preparation events
-        prep_date = departure_date - timedelta(days=7)
-        prep_event = Event()
-        prep_event.name = f"Travel Prep: {destination}"
-        prep_event.description = f"""
-Travel Preparation Checklist:
-□ Confirm flight tickets
-□ Book accommodation
-□ Check passport validity (6+ months)
-□ Review travel insurance
-□ Check vaccination requirements
-□ Currency exchange
-□ Pack appropriate clothing
-□ Download offline maps
-□ Notify bank of travel
-□ Set up international phone plan
+---
+RESPONSE STRUCTURE:
+1. *Suggested Flights*: Table with airline, stops, class, price range (RM), booking website, and price basis.
+2. *Suggested Hotels*: Table with hotel name, price per night (RM), booking website, reason/note (including how it matches the user's hotel preference), and price basis.
+3. *Travel Advisory & Visa*: Bullet points summarizing requirements for Malaysians.
+4. *User Input Recap*: List all input parameters for transparency.
+5. *Key Company Policies*: List the most relevant policies.
 
-Emergency Contacts:
-- Local Emergency: {travel_info['travel_advisories']['emergency_contacts'].get('local_emergency', 'N/A')}
-- Embassy: {travel_info['travel_advisories']['emergency_contacts'].get('embassy', 'N/A')}
-        """
-        prep_event.begin = prep_date
-        prep_event.end = prep_date + timedelta(hours=2)
-        calendar.events.add(prep_event)
-        
-        # Post-travel follow-up
-        followup_date = return_date + timedelta(days=1)
-        followup_event = Event()
-        followup_event.name = f"Travel Follow-up: {destination}"
-        followup_event.description = f"""
-Post-Travel Tasks:
-□ Submit expense report
-□ Upload receipts
-□ Write trip report
-□ Follow up with contacts made
-□ Update CRM with new leads
-□ Schedule follow-up meetings
-□ Share trip insights with team
+---
+Important: All suggestions must strictly comply with the user's input and company policies, and use only RM currency. If no matching options are available, explain clearly and recommend the next closest compliant alternatives.
 
-Expense Submission Deadline: {(return_date + timedelta(days=30)).strftime('%Y-%m-%d')}
-        """
-        followup_event.begin = followup_date.replace(hour=9)
-        followup_event.end = followup_date.replace(hour=10)
-        calendar.events.add(followup_event)
+Output only the complete Markdown plan as described above.
+"""
+
+    try:
+        response = gemini_model.generate_content(prompt)
+        # Ensure all currency displays use RM (reuse ensure_rm_currency)
+        if hasattr(response, 'text'):
+            ai_response = response.text.strip()
+        else:
+            ai_response = str(response)
+        # Enforce RM currency formatting (in case AI slips)
+        ai_response = ensure_rm_currency(ai_response)
+        return ai_response
+    except Exception as e:
+        return f"Could not generate AI travel plan: {str(e)}"
+
+def get_dashboard_stats():
+    """Get real-time dashboard statistics from the travel_requests table"""
+    try:
+        engine = create_engine(DATABASE_URL)
         
-        # Save calendar file
-        calendar_filename = f"travel_{destination.lower().replace(' ', '_')}_{departure_date.strftime('%Y%m%d')}.ics"
-        
-        with open(calendar_filename, "w") as f:
-            f.writelines(calendar.serialize_iter())
-        
-        return calendar_filename, len(calendar.events)
+        with engine.connect() as connection:
+            # Query to get total requests
+            total_result = connection.execute(text("SELECT COUNT(*) as total FROM travel_requests"))
+            total_requests = total_result.fetchone()[0] if total_result else 0
+            
+            # Query to get approved requests (handle both upper and lower case)
+            approved_result = connection.execute(text("SELECT COUNT(*) as approved FROM travel_requests WHERE LOWER(status) = 'approved'"))
+            approved_requests = approved_result.fetchone()[0] if approved_result else 0
+            
+            # Query to get pending requests (handle both upper and lower case)
+            pending_result = connection.execute(text("SELECT COUNT(*) as pending FROM travel_requests WHERE LOWER(status) = 'pending'"))
+            pending_requests = pending_result.fetchone()[0] if pending_result else 0
+            
+            # Query to get recent requests (last 5) - simplified without employee name for now
+            recent_query = text("""
+            SELECT request_id, destination, estimated_cost, status, created_at
+            FROM travel_requests
+            ORDER BY created_at DESC
+            LIMIT 5
+            """)
+            recent_result = connection.execute(recent_query)
+            recent_requests = [dict(row._mapping) for row in recent_result]
+            
+            return {
+                'total_requests': total_requests,
+                'approved_requests': approved_requests,
+                'pending_requests': pending_requests,
+                'recent_requests': recent_requests or []
+            }
         
     except Exception as e:
-        return None, str(e)
+        print(f"Dashboard stats error: {e}")
+        return {
+            'total_requests': 0,
+            'approved_requests': 0,
+            'pending_requests': 0,
+            'recent_requests': []
+        }
 
-def generate_travel_itinerary(request_data, travel_info):
-    """Generate detailed travel itinerary"""
-    itinerary = f"""
-# 🗓️ COMPREHENSIVE TRAVEL ITINERARY
+# --- CALENDAR INTEGRATION SYSTEM ---
 
-## 📋 Trip Overview
-- **Destination:** {request_data['destination']}
-- **Purpose:** {request_data['purpose']}
-- **Duration:** {request_data['departure_date']} to {request_data['return_date']}
-- **Total Days:** {(request_data['return_date'] - request_data['departure_date']).days}
-
-## 🌍 Destination Information
-- **Country:** {travel_info['destination_info'].get('country', 'N/A')}
-- **Language:** {travel_info['destination_info'].get('language', 'N/A')}
-- **Currency:** {travel_info['destination_info'].get('currency', 'N/A')}
-- **Business Hours:** {travel_info['destination_info'].get('business_hours', 'N/A')}
-- **Time Zone:** {travel_info['time_zone'].get('local_time', 'Check local time')}
-
-## 💰 Budget Breakdown
-- **Accommodation:** ${travel_info['estimated_costs'].get('accommodation', 0):.2f}
-- **Meals:** ${travel_info['estimated_costs'].get('meals', 0):.2f}
-- **Local Transport:** ${travel_info['estimated_costs'].get('local_transport', 0):.2f}
-- **TOTAL ESTIMATE:** ${travel_info['estimated_costs'].get('total_estimate', 0):.2f}
-
-## 🌤️ Weather Forecast
-- **Conditions:** {travel_info['weather_forecast'].get('conditions', 'Check forecast')}
-- **Temperature:** {travel_info['weather_forecast'].get('temperature_range', 'N/A')}
-- **Precipitation:** {travel_info['weather_forecast'].get('precipitation', 'N/A')}
-
-## 🛡️ Travel Advisories
-- **Safety Level:** {travel_info['travel_advisories'].get('safety_level', 'Check current status')}
-- **Health Requirements:** {travel_info['travel_advisories'].get('health_requirements', 'N/A')}
-- **Documentation:** {travel_info['travel_advisories'].get('documentation', 'N/A')}
-
-## 🏢 Business Information
-- **Business Districts:** {travel_info['destination_info'].get('business_districts', 'N/A')}
-- **Cultural Notes:** {travel_info['destination_info'].get('cultural_notes', 'N/A')}
-- **Transportation:** {travel_info['destination_info'].get('transportation', 'N/A')}
-
-## 📞 Emergency Contacts
-- **Local Emergency:** {travel_info['travel_advisories']['emergency_contacts'].get('local_emergency', 'N/A')}
-- **Embassy:** {travel_info['travel_advisories']['emergency_contacts'].get('embassy', 'Contact nearest embassy')}
-
-## ✅ Pre-Travel Checklist
-□ Confirm flights and accommodation
-□ Check passport validity (6+ months required)
-□ Review and purchase travel insurance
-□ Check vaccination requirements
-□ Arrange currency exchange
-□ Download offline maps and translation apps
-□ Notify bank and credit card companies
-□ Set up international phone/data plan
-□ Pack weather-appropriate business attire
-□ Prepare business cards and meeting materials
-
-## 📱 Recommended Apps
-- Google Translate (offline mode)
-- XE Currency
-- Local transportation apps
-- Weather app
-- Company expense tracking app
-    """
-    
-    return itinerary
-
-# Initialize AI components
-gemini_model, policy_collection = initialize_ai_components()
 def smart_policy_search(query, policies):
     """Smart local search that matches questions to relevant policies"""
     
@@ -1260,27 +1031,384 @@ def smart_policy_search(query, policies):
     
     return response
 
-# --- CALENDAR FUNCTION ---
-def create_calendar_event(destination: str, departure_date: str, return_date: str, purpose: str) -> str:
-    """Create a calendar event for the travel request."""
+# --- ENHANCED CALENDAR INTEGRATION SYSTEM ---
+def create_comprehensive_travel_calendar(destination, departure_date, return_date, purpose, travel_class, hotel_preference, estimated_cost, employee_email):
+    """
+    Create a comprehensive travel calendar with detailed itinerary
+    Compatible with Google Calendar, Outlook, Apple Calendar, and all .ics supporting apps
+    """
     try:
         calendar = Calendar()
-        event = Event()
+        calendar.creator = "Enterprise Travel Management System"
+        calendar.prodid = "-//Enterprise Travel//Travel Calendar//EN"
         
-        event.name = f"Business Travel to {destination}"
-        event.description = f"Purpose: {purpose}"
-        event.begin = datetime.strptime(departure_date, "%Y-%m-%d")
-        event.end = datetime.strptime(return_date, "%Y-%m-%d")
-        event.location = destination
+        # Convert string dates to datetime objects
+        if isinstance(departure_date, str):
+            dep_date = datetime.strptime(departure_date, "%Y-%m-%d")
+        else:
+            dep_date = datetime.combine(departure_date, datetime.min.time())
+            
+        if isinstance(return_date, str):
+            ret_date = datetime.strptime(return_date, "%Y-%m-%d") 
+        else:
+            ret_date = datetime.combine(return_date, datetime.min.time())
         
-        calendar.events.add(event)
+        duration = (ret_date.date() - dep_date.date()).days
         
-        with open(CALENDAR_FILE, "w") as f:
-            f.writelines(calendar.serialize_iter())
+        # === 1. MAIN TRAVEL EVENT ===
+        main_event = Event()
+        main_event.name = f"🏢 Business Travel: {destination}"
+        main_event.begin = dep_date.replace(hour=6, minute=0)  # Early morning start
+        main_event.end = ret_date.replace(hour=22, minute=0)   # Evening return
+        main_event.location = destination
+        main_event.description = f"""
+📋 BUSINESS TRAVEL DETAILS
+═══════════════════════════
+🎯 Purpose: {purpose}
+✈️ Travel Class: {travel_class}
+🏨 Hotel: {hotel_preference}
+💰 Budget: RM{estimated_cost:,.2f}
+👤 Employee: {employee_email}
+📞 Emergency: +1-800-TRAVEL-HELP
+
+🔔 IMPORTANT REMINDERS:
+• Passport & travel documents
+• Expense tracking app
+• Company credit card
+• Travel insurance confirmation
+• Emergency contact information
+
+💼 BUSINESS OBJECTIVES:
+• Review and confirm meeting schedules
+• Prepare presentation materials
+• Update travel expense reports daily
+• Submit final reports within 5 days of return
+"""
         
-        return f"✅ Calendar event created successfully! File saved as '{CALENDAR_FILE}'"
+        # Add reminders for main event
+        main_event.alarms = [
+            DisplayAlarm(trigger=timedelta(days=-7)),
+            DisplayAlarm(trigger=timedelta(days=-1)),
+            DisplayAlarm(trigger=timedelta(hours=-2))
+        ]
+        
+        calendar.events.add(main_event)
+        
+        # === 2. DEPARTURE DAY EVENTS ===
+        
+        # Pre-flight preparation
+        prep_event = Event()
+        prep_event.name = f"✈️ Departure Preparation - {destination}"
+        prep_event.begin = dep_date.replace(hour=4, minute=0)
+        prep_event.end = dep_date.replace(hour=6, minute=0)
+        prep_event.description = f"""
+🧳 DEPARTURE CHECKLIST:
+• Check-in online (24h before)
+• Pack business attire for {purpose}
+• Travel documents & ID
+• Phone chargers & adapters
+• Business cards & materials
+• Company laptop & charger
+
+📱 Final confirmations:
+• Flight status check
+• Ground transportation
+• Hotel reservation
+• First day meeting schedule
+"""
+        prep_event.alarms = [DisplayAlarm(trigger=timedelta(hours=-1))]
+        calendar.events.add(prep_event)
+        
+        # Flight departure (estimated)
+        flight_dep = Event()
+        flight_dep.name = f"🛫 Flight Departure to {destination}"
+        flight_dep.begin = dep_date.replace(hour=8, minute=0)
+        flight_dep.end = dep_date.replace(hour=12, minute=0)  # Assume 4-hour flight
+        flight_dep.location = "Airport Departure Terminal"
+        flight_dep.description = f"""
+✈️ FLIGHT INFORMATION:
+• Travel Class: {travel_class}
+• Estimated Duration: 4 hours
+• Destination: {destination}
+
+🎯 In-flight productivity:
+• Review meeting materials
+• Prepare presentation notes
+• Update project status
+• Plan daily schedule
+
+📱 Upon Arrival:
+• Confirm hotel check-in
+• Update arrival status to team
+• Set up local transportation
+"""
+        flight_dep.alarms = [DisplayAlarm(trigger=timedelta(hours=-3))]
+        calendar.events.add(flight_dep)
+        
+        # Hotel check-in
+        checkin_event = Event()
+        checkin_event.name = f"🏨 Hotel Check-in: {hotel_preference}"
+        checkin_event.begin = dep_date.replace(hour=15, minute=0)
+        checkin_event.end = dep_date.replace(hour=16, minute=0)
+        checkin_event.location = f"{hotel_preference}, {destination}"
+        checkin_event.description = f"""
+🏨 HOTEL INFORMATION:
+• Type: {hotel_preference}
+• Location: {destination}
+• Check-in: 3:00 PM
+• Check-out: {ret_date.strftime('%Y-%m-%d')} 11:00 AM
+
+📋 Check-in Tasks:
+• Confirm room amenities
+• WiFi setup for business
+• Review hotel services
+• Plan transportation to meetings
+
+💼 Hotel Business Center:
+• Printing services available
+• Meeting room bookings
+• Concierge assistance
+"""
+        calendar.events.add(checkin_event)
+        
+        # === 3. DAILY BUSINESS ACTIVITIES ===
+        
+        current_date = dep_date.date()
+        for day_num in range(duration):
+            if day_num == 0:  # Arrival day
+                continue
+                
+            current_day = current_date + timedelta(days=day_num)
+            current_datetime = datetime.combine(current_day, datetime.min.time())
+            
+            # Morning business block
+            morning_meeting = Event()
+            morning_meeting.name = f"💼 Business Activities - Day {day_num + 1}"
+            morning_meeting.begin = current_datetime.replace(hour=9, minute=0)
+            morning_meeting.end = current_datetime.replace(hour=12, minute=0)
+            morning_meeting.location = destination
+            morning_meeting.description = f"""
+📅 Day {day_num + 1} - Business Schedule
+
+🎯 PURPOSE: {purpose}
+
+⏰ MORNING BLOCK (9 AM - 12 PM):
+• Primary business meetings
+• {purpose} activities
+• Network building
+• Progress review
+
+📋 Daily Tasks:
+• Update expense tracking
+• Send status update to manager
+• Review next day schedule
+• Follow up on action items
+
+💼 Evening Tasks:
+• Document meeting outcomes
+• Update project status
+• Prepare tomorrow's materials
+"""
+            calendar.events.add(morning_meeting)
+            
+            # Afternoon business block
+            afternoon_meeting = Event()
+            afternoon_meeting.name = f"🤝 Afternoon Sessions - Day {day_num + 1}"
+            afternoon_meeting.begin = current_datetime.replace(hour=14, minute=0)
+            afternoon_meeting.end = current_datetime.replace(hour=17, minute=0)
+            afternoon_meeting.location = destination
+            afternoon_meeting.description = f"""
+🕐 AFTERNOON BLOCK (2 PM - 5 PM):
+• Follow-up meetings
+• {purpose} continuation
+• Documentation time
+• Strategic discussions
+
+🎯 Key Focus Areas:
+• Meeting objectives completion
+• Relationship building
+• Information gathering
+• Next steps planning
+
+📝 End-of-Day Review:
+• Meeting notes compilation
+• Action items tracking
+• Expense recording
+• Schedule confirmation for next day
+"""
+            calendar.events.add(afternoon_meeting)
+            
+            # Daily expense reminder
+            expense_reminder = Event()
+            expense_reminder.name = f"💰 Daily Expense Tracking - Day {day_num + 1}"
+            expense_reminder.begin = current_datetime.replace(hour=20, minute=0)
+            expense_reminder.end = current_datetime.replace(hour=20, minute=30)
+            expense_reminder.description = f"""
+💰 DAILY EXPENSE TRACKING:
+
+📊 Record today's expenses:
+• Meals: breakfast, lunch, dinner
+• Transportation: taxi, public transit
+• Business entertainment
+• Incidental expenses
+
+📱 Expense App Tasks:
+• Photo receipts immediately
+• Categorize all expenses
+• Add business purpose notes
+• Submit for pre-approval if needed
+
+💡 Budget Status:
+• Total Budget: RM{estimated_cost:,.2f}
+• Track daily spending
+• Flag any budget concerns
+"""
+            expense_reminder.alarms = [DisplayAlarm(trigger=timedelta(minutes=-30))]
+            calendar.events.add(expense_reminder)
+        
+        # === 4. DEPARTURE DAY EVENTS ===
+        
+        # Hotel checkout
+        checkout_event = Event()
+        checkout_event.name = f"🏨 Hotel Check-out & Final Preparations"
+        checkout_event.begin = ret_date.replace(hour=10, minute=0)
+        checkout_event.end = ret_date.replace(hour=11, minute=0)
+        checkout_event.location = f"{hotel_preference}, {destination}"
+        checkout_event.description = f"""
+🏨 CHECK-OUT PROCESS:
+• Settle hotel bill
+• Collect all receipts
+• Confirm no items left behind
+• Arrange airport transportation
+
+📋 Final Business Tasks:
+• Send thank you emails
+• Confirm follow-up actions
+• Update travel status
+• Submit expense receipts
+
+💼 Travel Preparation:
+• Pack all materials
+• Charge devices for flight
+• Check flight status
+• Confirm departure gate
+"""
+        checkout_event.alarms = [DisplayAlarm(trigger=timedelta(minutes=-30))]
+        calendar.events.add(checkout_event)
+        
+        # Return flight
+        return_flight = Event()
+        return_flight.name = f"🛬 Return Flight from {destination}"
+        return_flight.begin = ret_date.replace(hour=14, minute=0)
+        return_flight.end = ret_date.replace(hour=18, minute=0)
+        return_flight.location = f"{destination} Airport"
+        return_flight.description = f"""
+✈️ RETURN FLIGHT INFORMATION:
+• Departure: {destination}
+• Travel Class: {travel_class}
+• Estimated Duration: 4 hours
+
+🎯 In-flight Tasks:
+• Trip summary notes
+• Action items review
+• Expense report draft
+• Follow-up planning
+
+📱 Post-arrival Tasks:
+• Confirm safe arrival
+• Submit travel completion report
+• Upload expense receipts
+• Schedule follow-up meetings
+"""
+        return_flight.alarms = [DisplayAlarm(trigger=timedelta(hours=-3))]
+        calendar.events.add(return_flight)
+        
+        # === 5. POST-TRAVEL FOLLOW-UP ===
+        
+        # Next day follow-up
+        followup_date = ret_date.date() + timedelta(days=1)
+        followup_datetime = datetime.combine(followup_date, datetime.min.time())
+        
+        followup_event = Event()
+        followup_event.name = f"📋 Post-Travel Follow-up: {destination}"
+        followup_event.begin = followup_datetime.replace(hour=9, minute=0)
+        followup_event.end = followup_datetime.replace(hour=10, minute=0)
+        followup_event.description = f"""
+📋 POST-TRAVEL TASKS:
+
+💼 Business Follow-up:
+• Send thank you emails to contacts
+• Share meeting outcomes with team
+• Update project status
+• Schedule follow-up meetings
+
+💰 Administrative Tasks:
+• Submit final expense report
+• Upload all receipts
+• Complete travel satisfaction survey
+• Update travel profile if needed
+
+📊 Reporting Requirements:
+• Trip summary report
+• Business outcomes achieved
+• Lessons learned
+• Recommendations for future trips
+
+⏰ Deadline: Complete within 5 business days
+"""
+        followup_event.alarms = [DisplayAlarm(trigger=timedelta(hours=-1))]
+        calendar.events.add(followup_event)
+        
+        # Final expense submission deadline
+        expense_deadline = followup_date + timedelta(days=4)
+        expense_deadline_datetime = datetime.combine(expense_deadline, datetime.min.time())
+        
+        expense_deadline_event = Event()
+        expense_deadline_event.name = f"💰 Expense Report Deadline - {destination} Trip"
+        expense_deadline_event.begin = expense_deadline_datetime.replace(hour=17, minute=0)
+        expense_deadline_event.end = expense_deadline_datetime.replace(hour=17, minute=30)
+        expense_deadline_event.description = f"""
+💰 EXPENSE REPORT FINAL SUBMISSION
+
+📊 Final Tasks:
+• Review all expense entries
+• Ensure all receipts uploaded
+• Verify total amounts
+• Submit for manager approval
+
+💼 Trip Summary Required:
+• Business objectives achieved
+• Total expenses: RM{estimated_cost:,.2f} budgeted
+• ROI and business value
+• Future recommendations
+
+⚠️ IMPORTANT: Expense reports must be submitted within 5 business days of return
+"""
+        expense_deadline_event.alarms = [
+            DisplayAlarm(trigger=timedelta(days=-1)),
+            DisplayAlarm(trigger=timedelta(hours=-2))
+        ]
+        calendar.events.add(expense_deadline_event)
+        
+        # === 6. SAVE CALENDAR FILE ===
+        calendar_filename = f"travel_itinerary_{destination.replace(' ', '_')}_{dep_date.strftime('%Y%m%d')}.ics"
+        calendar_path = f"./data/{calendar_filename}"
+        
+        # Ensure data directory exists
+        import os
+        os.makedirs("./data", exist_ok=True)
+        
+        with open(calendar_path, "w", encoding='utf-8') as f:
+            f.write(str(calendar))
+        
+        # Count total events created
+        event_count = len(calendar.events)
+        
+        return calendar_filename, event_count, calendar_path
+        
     except Exception as e:
-        return f"❌ Error creating calendar event: {str(e)}"
+        print(f"Calendar creation error: {e}")
+        return None, 0, None
 
 # --- STREAMLIT UI ---
 st.set_page_config(
@@ -1298,7 +1426,7 @@ if "chat_messages" not in st.session_state:
     st.session_state.chat_messages = [
         {
             "role": "assistant",
-            "content": "👋 Hello! I'm your AI Travel Policy Assistant. I can help you with:\n\n• Flight booking policies and costs\n• Hotel accommodation rules\n• Meal allowances and per diem\n• International travel requirements\n• Approval workflows\n• Budget and expense guidelines\n\nFeel free to ask me anything about company travel policies!",
+            "content": "👋 **Welcome to your AI Travel Policy Assistant!**\n\nI'm here to help you navigate company travel policies with intelligent, detailed responses. I can assist you with:\n\n**🏨 Accommodation Policies:**\n• Hotel cost limits and standards\n• Extended stay arrangements\n• Booking requirements and corporate rates\n\n**✈️ Flight & Transportation:**\n• Flight class eligibility (economy vs business)\n• International travel requirements\n• Ground transportation rules\n\n**💰 Expense Management:**\n• Daily meal allowances and per diem\n• Cost thresholds and budget limits\n• Expense reporting procedures\n\n**📋 Approval Workflows:**\n• Who needs to approve your travel\n• Required documentation\n• Emergency travel procedures\n\n**🌍 International Travel:**\n• Visa and passport requirements\n• Health and safety protocols\n• Special approval processes\n\n💬 **Just ask me anything!** Try questions like:\n• \"What's the hotel limit for New York?\"\n• \"When can I book business class?\"\n• \"Who approves international travel?\"\n• \"What's the meal allowance policy?\"\n\nI'll search our policy database and provide detailed, actionable guidance! 🚀",
             "timestamp": datetime.now().strftime("%H:%M")
         }
     ]
@@ -1315,34 +1443,32 @@ if "travel_history" not in st.session_state:
 with st.sidebar:
     st.markdown("## 🚀 System Dashboard")
     
-    # System Status
-    st.markdown("### 📊 System Status")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("AI Status", "🟢 Online")
-    with col2:
-        st.metric("Database", "🟢 Connected")
+    # Get real-time dashboard statistics
+    dashboard_stats = get_dashboard_stats()
     
-    # Quick Stats
+    # Quick Stats from Database - Only show Total Requests, Approved, and Pending
     st.markdown("### 📈 Quick Stats")
-    total_requests = len(st.session_state.travel_history)
-    approved_requests = len([r for r in st.session_state.travel_history if "APPROVED" in r.get("status", "")])
     
     col3, col4 = st.columns(2)
     with col3:
-        st.metric("Total Requests", total_requests)
+        st.metric("Total Requests", dashboard_stats['total_requests'])
     with col4:
-        st.metric("Approved", approved_requests)
+        st.metric("Approved", dashboard_stats['approved_requests'])
     
-    # Travel History
-    if st.session_state.travel_history:
+    # Show Pending in full width
+    st.metric("Pending", dashboard_stats['pending_requests'])
+    
+    # Recent Requests from Database (simplified)
+    if dashboard_stats['recent_requests']:
         st.markdown("### 📋 Recent Requests")
-        for i, request in enumerate(st.session_state.travel_history[-3:]):  # Show last 3
-            with st.expander(f"Request {request.get('request_id', f'#{i+1}')}"):
+        for request in dashboard_stats['recent_requests']:
+            with st.expander(f"Request #{request.get('request_id', 'N/A')}"):
                 st.write(f"**Destination:** {request.get('destination', 'N/A')}")
-                st.write(f"**Cost:** ${request.get('cost', 0):,.0f}")
+                st.write(f"**Cost:** RM{float(request.get('estimated_cost', 0)):,.0f}")
                 st.write(f"**Status:** {request.get('status', 'Unknown')}")
-                st.write(f"**Date:** {request.get('timestamp', 'N/A')}")
+                created_at = request.get('created_at')
+                if created_at:
+                    st.write(f"**Date:** {created_at.strftime('%Y-%m-%d %H:%M') if hasattr(created_at, 'strftime') else str(created_at)}")
     
     st.markdown("---")
     
@@ -1357,13 +1483,13 @@ with st.sidebar:
         ],
         "🏨 Hotel Policies": [
             "Standard business hotels",
-            "Max $250/night domestic",
-            "Max $400/night international"
+            "Max RM250/night domestic",
+            "Max RM400/night international"
         ],
         "💰 Budget Limits": [
-            "Standard employee: $15K/year",
-            "Manager: $20K/year",
-            "Executive: $30K/year"
+            "Standard employee: RM15K/year",
+            "Manager: RM20K/year",
+            "Executive: RM30K/year"
         ]
     }
     
@@ -1379,9 +1505,6 @@ with st.sidebar:
     if st.button("🗑️ Clear Chat History", use_container_width=True):
         st.session_state.chat_messages = [st.session_state.chat_messages[0]]  # Keep welcome message
         st.rerun()
-    
-    if st.button("📊 Download Policy Guide", use_container_width=True):
-        st.info("📖 Policy guide download would start here")
     
     if st.button("📞 Contact Support", use_container_width=True):
         st.info("📧 Email: travel-support@company.com\n📱 Phone: +1-800-TRAVEL")
@@ -1410,10 +1533,7 @@ except Exception as e:
 # Main tabs
 tab1, tab2 = st.tabs(["🤖 Policy Q&A Chat", "📋 Submit Travel Request"])
 
-# =======================================================================
-# TAB 1: CHATGPT-STYLE POLICY Q&A INTERFACE (Requirement 1 Implementation)
-# =======================================================================
-
+# TAB 1: CHATGPT-STYLE POLICY Q&A INTERFACE
 with tab1:
     st.header("🤖 Travel Policy AI Assistant")
     
@@ -1509,21 +1629,22 @@ with tab1:
         st.markdown('<div style="clear: both;"></div>', unsafe_allow_html=True)
     
     # Smart Quick Question Buttons
-    st.markdown("### 🚀 Smart Quick Questions")
+    st.markdown("### 🚀 Popular Policy Questions")
+    st.markdown("*Click any button below for instant answers to common travel policy questions:*")
     
-    # First Row - Basic Policy Questions
+    # First Row - Essential Policy Questions
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("🏨 Hotel Policy", key="hotel_quick_chat"):
-            user_msg = "What level of hotel can I stay in? What are the nightly cost limits?"
+        if st.button("🏨 Hotel Cost Limits", key="hotel_quick_chat"):
+            user_msg = "What are the hotel cost limits? How much can I spend per night on accommodation in different cities?"
             st.session_state.chat_messages.append({
                 "role": "user", 
                 "content": user_msg,
                 "timestamp": datetime.now().strftime("%H:%M")
             })
             
-            with st.spinner("🤖 AI thinking..."):
+            with st.spinner("🤖 Searching hotel policies..."):
                 response = answer_policy_question(user_msg)
                 st.session_state.chat_messages.append({
                     "role": "assistant",
@@ -1533,15 +1654,20 @@ with tab1:
             st.rerun()
     
     with col2:
-        if st.button("✈️ Flight Policy", key="flight_quick_chat"):
-            user_msg = "When can I book business class? What are the cabin class regulations for domestic and international flights?"
+        if st.button("✈️ Flight Class Rules", key="flight_quick_chat"):
+            user_msg = "When am I eligible for business class? What are the flight class policies for domestic vs international travel?"
+            st.session_state.chat_messages.append({
+                "role": "user", 
+                "content": user_msg,
+                "timestamp": datetime.now().strftime("%H:%M")
+            })
             st.session_state.chat_messages.append({
                 "role": "user", 
                 "content": user_msg,
                 "timestamp": datetime.now().strftime("%H:%M")
             })
             
-            with st.spinner("🤖 AI thinking..."):
+            with st.spinner("🤖 Searching flight policies..."):
                 response = answer_policy_question(user_msg)
                 st.session_state.chat_messages.append({
                     "role": "assistant",
@@ -1551,15 +1677,15 @@ with tab1:
             st.rerun()
     
     with col3:
-        if st.button("🍽️ Meal Standards", key="meal_quick_chat"):
-            user_msg = "What are the daily meal allowance standards? What expenses can be reimbursed?"
+        if st.button("🍽️ Meal Allowances", key="meal_quick_chat"):
+            user_msg = "What are the daily meal allowance limits? How does per diem work for domestic vs international travel?"
             st.session_state.chat_messages.append({
                 "role": "user", 
                 "content": user_msg,
                 "timestamp": datetime.now().strftime("%H:%M")
             })
             
-            with st.spinner("🤖 AI thinking..."):
+            with st.spinner("🤖 Searching meal policies..."):
                 response = answer_policy_question(user_msg)
                 st.session_state.chat_messages.append({
                     "role": "assistant",
@@ -1570,14 +1696,14 @@ with tab1:
     
     with col4:
         if st.button("🌍 International Travel", key="international_quick_chat"):
-            user_msg = "What special approvals are needed for international travel? What additional requirements are there?"
+            user_msg = "What special requirements and approvals are needed for international business travel? What documents do I need?"
             st.session_state.chat_messages.append({
                 "role": "user", 
                 "content": user_msg,
                 "timestamp": datetime.now().strftime("%H:%M")
             })
             
-            with st.spinner("🤖 AI thinking..."):
+            with st.spinner("🤖 Searching international policies..."):
                 response = answer_policy_question(user_msg)
                 st.session_state.chat_messages.append({
                     "role": "assistant",
@@ -1587,19 +1713,19 @@ with tab1:
             st.rerun()
     
     # Second Row - Practical Scenario Questions
-    st.markdown("#### 💼 Common Scenario Questions")
+    st.markdown("#### 💼 Approval & Process Questions")
     col5, col6, col7, col8 = st.columns(4)
     
     with col5:
-        if st.button("📋 Approval Process", key="approval_quick_chat"):
-            user_msg = "Who needs to approve my travel request? What is the approval process?"
+        if st.button("📋 Who Approves Travel?", key="approval_quick_chat"):
+            user_msg = "Who needs to approve my travel request? What's the approval workflow for different cost levels?"
             st.session_state.chat_messages.append({
                 "role": "user", 
                 "content": user_msg,
                 "timestamp": datetime.now().strftime("%H:%M")
             })
             
-            with st.spinner("🤖 AI thinking..."):
+            with st.spinner("🤖 Searching approval policies..."):
                 response = answer_policy_question(user_msg)
                 st.session_state.chat_messages.append({
                     "role": "assistant",
@@ -1609,15 +1735,15 @@ with tab1:
             st.rerun()
     
     with col6:
-        if st.button("💰 Cost Limits", key="cost_quick_chat"):
-            user_msg = "What are the cost limits for different types of business travel? What happens if I exceed them?"
+        if st.button("💰 Cost Thresholds", key="cost_quick_chat"):
+            user_msg = "What are the budget limits and cost thresholds for business travel? When do I need special approval?"
             st.session_state.chat_messages.append({
                 "role": "user", 
                 "content": user_msg,
                 "timestamp": datetime.now().strftime("%H:%M")
             })
             
-            with st.spinner("🤖 AI thinking..."):
+            with st.spinner("🤖 Searching cost policies..."):
                 response = answer_policy_question(user_msg)
                 st.session_state.chat_messages.append({
                     "role": "assistant",
@@ -1627,15 +1753,33 @@ with tab1:
             st.rerun()
     
     with col7:
-        if st.button("⏰ Booking Time", key="booking_quick_chat"):
-            user_msg = "How far in advance do I need to book? How are urgent travel requests handled?"
+        if st.button("⏰ Booking Requirements", key="booking_quick_chat"):
+            user_msg = "How far in advance should I book travel? What are the policies for last-minute or emergency travel?"
             st.session_state.chat_messages.append({
                 "role": "user", 
                 "content": user_msg,
                 "timestamp": datetime.now().strftime("%H:%M")
             })
             
-            with st.spinner("🤖 AI thinking..."):
+            with st.spinner("🤖 Searching booking policies..."):
+                response = answer_policy_question(user_msg)
+                st.session_state.chat_messages.append({
+                    "role": "assistant",
+                    "content": response,
+                    "timestamp": datetime.now().strftime("%H:%M")
+                })
+            st.rerun()
+    
+    with col8:
+        if st.button("🚗 Transportation Policy", key="transport_quick_chat"):
+            user_msg = "What are the policies for ground transportation? Can I use rideshare, taxis, or rental cars?"
+            st.session_state.chat_messages.append({
+                "role": "user", 
+                "content": user_msg,
+                "timestamp": datetime.now().strftime("%H:%M")
+            })
+            
+            with st.spinner("🤖 Searching transport policies..."):
                 response = answer_policy_question(user_msg)
                 st.session_state.chat_messages.append({
                     "role": "assistant",
@@ -1660,10 +1804,43 @@ with tab1:
                     "content": response,
                     "timestamp": datetime.now().strftime("%H:%M")
                 })
-            st.rerun()
+    
+    # === ENHANCED HELP SECTION ===
+    with st.expander("💡 **How to Get the Best Answers from Your AI Assistant**"):
+        st.markdown("""
+        **🎯 For Best Results, Try These Question Types:**
+        
+        **✅ Specific Policy Questions:**
+        • "What's the hotel limit for London?"
+        • "Can I book business class to Tokyo?"
+        • "What documents do I need for China travel?"
+        
+        **✅ Scenario-Based Questions:**
+        • "I'm traveling to NYC for 3 days, what's my meal budget?"
+        • "My client meeting got moved to next week, can I change my flight?"
+        • "I need to attend an emergency meeting in Dubai, what approvals do I need?"
+        
+        **✅ Process Questions:**
+        • "Who approves travel over RM15000?"
+        • "How do I submit an expense report?"
+        • "What's the emergency travel procedure?"
+        
+        **📝 Tips for Better Answers:**
+        • Be specific about destinations, dates, and purpose
+        • Mention your job level or department if relevant
+        • Ask follow-up questions for clarification
+        • Use natural language - no need for formal phrasing
+        
+        **🚀 Advanced Features:**
+        • The AI searches through 15+ comprehensive company policies
+        • Vector database provides semantic search for related topics
+        • Responses include practical examples and next steps
+        • All answers are based on your company's actual travel policies
+        """)
     
     # Chat Input Interface
     st.markdown("### ✍️ Ask Your Question")
+    st.markdown("*Type any travel policy question below. The AI will search our policy database and provide detailed guidance.*")
     
     # Create chat input form
     with st.form("chat_form", clear_on_submit=True):
@@ -1707,13 +1884,13 @@ with tab1:
         st.session_state.chat_messages = [st.session_state.chat_messages[0]]  # Keep welcome message
         st.rerun()
     
-    # Chat Statistics
+    # Enhanced Chat Statistics and Analytics
     if len(st.session_state.chat_messages) > 1:
-        with st.expander(f"📊 Chat Statistics ({len(st.session_state.chat_messages)-1} messages)"):
+        with st.expander(f"📊 Session Analytics ({len(st.session_state.chat_messages)-1} messages exchanged)"):
             user_messages = [msg for msg in st.session_state.chat_messages if msg["role"] == "user"]
             assistant_messages = [msg for msg in st.session_state.chat_messages if msg["role"] == "assistant"]
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.metric("Questions Asked", len(user_messages))
             with col2:
@@ -1722,14 +1899,68 @@ with tab1:
                 if user_messages:
                     first_msg_time = user_messages[0]["timestamp"]
                     st.metric("Session Started", first_msg_time)
-
-# =======================================================================
-# TAB 2: ENHANCED TRAVEL REQUEST SUBMISSION (Requirements 2,3,4,5 Implementation)  
-# =======================================================================
-
-# Note: Removed duplicate tab1 interface to avoid confusion
-# ChatGPT-style interface is now the only policy query method
-
+            with col4:
+                # Calculate average response quality indicator
+                avg_response_length = sum(len(msg["content"]) for msg in assistant_messages[1:]) / max(len(assistant_messages)-1, 1)
+                quality_score = "High" if avg_response_length > 500 else "Standard"
+                st.metric("Response Detail", quality_score)
+            
+            # Policy topic analysis
+            if len(user_messages) > 0:
+                st.markdown("**📈 Topics Discussed This Session:**")
+                topic_keywords = {
+                    '🏨 Hotel': ['hotel', 'accommodation', 'room', 'stay'],
+                    '✈️ Flight': ['flight', 'plane', 'business class', 'economy'],
+                    '🍽️ Meals': ['meal', 'food', 'allowance', 'per diem'],
+                    '💰 Costs': ['cost', 'budget', 'limit', 'money', 'price'],
+                    '📋 Approval': ['approval', 'approve', 'manager', 'director'],
+                    '🌍 International': ['international', 'overseas', 'visa', 'passport']
+                }
+                
+                topics_discussed = []
+                all_user_text = ' '.join([msg["content"].lower() for msg in user_messages])
+                
+                for topic, keywords in topic_keywords.items():
+                    if any(keyword in all_user_text for keyword in keywords):
+                        topics_discussed.append(topic)
+                
+                if topics_discussed:
+                    st.write("• " + " • ".join(topics_discussed))
+                else:
+                    st.write("• General travel policy inquiries")
+    
+    # Suggested follow-up questions based on chat history
+    if len(st.session_state.chat_messages) > 3:  # After some conversation
+        with st.expander("🔮 **Suggested Follow-up Questions**"):
+            follow_up_suggestions = [
+                "What documentation do I need for my trip?",
+                "Are there any special requirements for my destination?",
+                "How do I submit expenses after my trip?",
+                "What's the cancellation policy if plans change?",
+                "Can I extend my trip for personal reasons?",
+                "What's covered by travel insurance?",
+                "How do I handle currency exchange?",
+                "What if I need to travel on weekends or holidays?"
+            ]
+            
+            st.markdown("**💡 Consider asking about:**")
+            for i, suggestion in enumerate(follow_up_suggestions[:4]):  # Show 4 suggestions
+                if st.button(f"❓ {suggestion}", key=f"follow_up_{i}"):
+                    st.session_state.chat_messages.append({
+                        "role": "user",
+                        "content": suggestion,
+                        "timestamp": datetime.now().strftime("%H:%M")
+                    })
+                    
+                    with st.spinner("🤖 Generating detailed response..."):
+                        response = answer_policy_question(suggestion)
+                        st.session_state.chat_messages.append({
+                            "role": "assistant",
+                            "content": response,
+                            "timestamp": datetime.now().strftime("%H:%M")
+                        })
+                    st.rerun()
+# TAB 2: ENHANCED TRAVEL REQUEST SUBMISSION
 with tab2:
     st.header("Submit Travel Request")
     
@@ -1760,11 +1991,12 @@ with tab2:
     st.markdown("### ✈️ Simplified Travel Request System")
     st.markdown("""
     <div style="background-color: #e7f3ff; padding: 15px; border-radius: 8px; border-left: 4px solid #2196F3; margin-bottom: 20px;">
-    <strong>🎯 Smart AI Validation System:</strong><br>
-    ✅ <strong>Real-time Policy Check:</strong> Instant validation against company policies<br>
-    ✅ <strong>Budget Analysis:</strong> Automatic cost breakdown and eligibility check<br>
-    ✅ <strong>Smart Suggestions:</strong> AI recommendations for compliance and savings<br>
-    ✅ <strong>Transparent Results:</strong> Clear display of costs, policies, and approval status
+    <strong>🎯 Streamlined Travel Request Workflow:</strong><br>
+    ✅ <strong>Submit Travel Request:</strong> Enter travel details<br>
+    ✅ <strong>AI Validates Against Policies:</strong> Instant policy compliance check<br>
+    ✅ <strong>Routes for Approval:</strong> Automatic approval routing<br>
+    ✅ <strong>Creates Calendar Events:</strong> Generate travel itinerary<br>
+    ✅ <strong>Sends Confirmations:</strong> Complete request processing
     </div>
     """, unsafe_allow_html=True)
     
@@ -1780,7 +2012,7 @@ with tab2:
                 value=datetime.now().date() + timedelta(days=30),
                 min_value=datetime.now().date() + timedelta(days=1)
             )
-            estimated_cost = st.number_input("💰 Estimated Total Cost ($)", min_value=0.0, step=100.0, value=3000.0, help="Total estimated cost including flights, hotels, meals, and transportation")
+            estimated_cost = st.number_input("💰 Estimated Total Cost (RM)", min_value=0.0, step=100.0, value=3000.0, help="Total estimated cost including flights, hotels, meals, and transportation")
             
         with col2:
             return_date = st.date_input(
@@ -1832,16 +2064,16 @@ with tab2:
             with col6:
                 st.markdown("**💰 Cost Analysis**")
                 daily_cost = estimated_cost / max(duration, 1)
-                st.info(f"Daily rate: ${daily_cost:.0f}")
+                st.info(f"Daily rate: RM{daily_cost:.0f}")
                 
                 if estimated_cost > 5000:
-                    st.error(f"⚠️ HIGH COST: ${estimated_cost:,.0f}")
+                    st.error(f"⚠️ HIGH COST: RM{estimated_cost:,.0f}")
                     st.caption("VP approval required")
                 elif estimated_cost > 3000:
-                    st.warning(f"💰 MEDIUM: ${estimated_cost:,.0f}")
+                    st.warning(f"💰 MEDIUM: RM{estimated_cost:,.0f}")
                     st.caption("Director approval required")
                 else:
-                    st.success(f"✅ STANDARD: ${estimated_cost:,.0f}")
+                    st.success(f"✅ STANDARD: RM{estimated_cost:,.0f}")
                     st.caption("Manager approval sufficient")
             
             with col7:
@@ -1891,9 +2123,67 @@ with tab2:
         with col9:
             preview_button = st.form_submit_button(
                 "👁️ Quick Preview",
-                help="Preview AI validation without submitting"
+                use_container_width=True,
+                help="Get a quick AI analysis preview without submitting the full request"
             )
-    # Enhanced Form Processing (Requirements 2-5 Implementation)
+
+    # Calendar generation section outside the form
+    st.markdown("### 📅 **Travel Calendar Generation**")
+    col_cal1, col_cal2 = st.columns([1, 1])
+
+    with col_cal1:
+        if st.button("Generate Travel Calendar", type="secondary", use_container_width=True, key="cal_gen"):
+            # Check if minimum required fields are filled
+            if destination and departure_date and return_date and employee_email:
+                try:
+                    result = create_comprehensive_travel_calendar(
+                        destination=destination,
+                        departure_date=departure_date,
+                        return_date=return_date,
+                        purpose=purpose or "Business Travel",
+                        travel_class=travel_class,
+                        hotel_preference=hotel_preference or "3-star",
+                        estimated_cost=estimated_cost or 0,
+                        employee_email=employee_email
+                    )
+                    
+                    if result and result[0]:  # Check if function returned valid results
+                        calendar_filename, event_count, calendar_path = result
+                        
+                        # Read the calendar content from the file
+                        with open(calendar_path, 'r', encoding='utf-8') as f:
+                            calendar_content = f.read()
+                        
+                        st.success(f"✅ Travel calendar generated successfully! ({event_count} events created)")
+                        st.session_state['calendar_content'] = calendar_content
+                        st.session_state['calendar_filename'] = calendar_filename
+                    else:
+                        st.error("Failed to generate calendar")
+                except Exception as e:
+                    st.error(f"Calendar generation error: {str(e)}")
+            else:
+                st.warning("Please fill in Destination, Departure Date, Return Date, and Employee Email to generate calendar")
+
+    with col_cal2:
+        # Show download button if calendar was generated
+        if 'calendar_content' in st.session_state and 'calendar_filename' in st.session_state:
+            st.download_button(
+                label="📥 Download Calendar (.ics)",
+                data=st.session_state['calendar_content'],
+                file_name=st.session_state['calendar_filename'],
+                mime="text/calendar",
+                use_container_width=True,
+                help="Download your travel calendar to import into Google Calendar, Outlook, or Apple Calendar",
+                key="cal_download"
+            )
+
+    if 'calendar_content' in st.session_state:
+        st.info("💡 **Import Instructions:** After downloading, open the .ics file or import it directly into your calendar app:\n"
+               "• **Google Calendar:** Settings → Import & Export → Import\n"
+               "• **Outlook:** File → Import\n" 
+               "• **Apple Calendar:** File → Import")
+
+    # Preview section
     if preview_button:
         if all([destination, departure_date, return_date, estimated_cost, purpose, employee_email]):
             if return_date <= departure_date:
@@ -1904,8 +2194,8 @@ with tab2:
                     policies_cache = load_policies()
                     gemini_model, _ = initialize_ai_components()
                     
-                    # Run enhanced AI validation with simplified fields
-                    is_valid, errors, warnings, suggestions, compliance_score, policy_compliance, policy_violations = ai_validate_travel_request(
+                    # Run simplified AI validation
+                    validation_report = ai_validate_travel_request(
                         destination=destination,
                         departure_date=departure_date,
                         return_date=return_date,
@@ -1918,37 +2208,21 @@ with tab2:
                         gemini_model=gemini_model
                     )
                     
-                    # Generate comprehensive validation report
-                    validation_report = generate_validation_report(
-                        is_valid, errors, warnings, suggestions, compliance_score, 
-                        policy_compliance, policy_violations, destination, estimated_cost
-                    )
-                    
                     preview_content = f"""
-### 🔍 ENHANCED AI VALIDATION PREVIEW
+### 🔍 SIMPLIFIED AI VALIDATION PREVIEW
 
 {validation_report}
 
-### 📊 Preview Summary
-- **Validation Status:** {'✅ READY TO SUBMIT' if is_valid else '❌ REQUIRES ATTENTION'}
-- **Compliance Score:** {compliance_score:.1f}/100
-- **Issues Found:** {len(errors)} errors, {len(warnings)} warnings
-- **Policy Checks:** {len(policy_compliance)} compliant, {len(policy_violations)} violations
-
-### 💡 Preview Mode Notice
-This is a preview analysis. Submit the form to get the complete validation with approval workflow routing.
+###  Preview Mode Notice
+This is a preview analysis. Submit the form to get the complete workflow:
+**Submit travel request → AI validates → Routes for approval → Creates calendar → Sends confirmations**
 """
                     
-                    # Display the preview
-                    if is_valid:
-                        st.success(f"✅ **Validation Passed** - Compliance Score: {compliance_score:.1f}/100")
-                    else:
-                        st.error(f"❌ **Validation Issues Found** - Compliance Score: {compliance_score:.1f}/100")
-                    
+                    # Display the simplified preview
                     st.markdown(preview_content)
         else:
             st.error("❌ Please fill in all required fields for preview")
-    
+
     if submitted:
         # Enhanced validation for all required fields
         required_fields = [destination, departure_date, return_date, estimated_cost, purpose, employee_email]
@@ -1971,8 +2245,8 @@ This is a preview analysis. Submit the form to get the complete validation with 
                     policies_cache = load_policies()
                     gemini_model, _ = initialize_ai_components()
                     
-                    # Run enhanced AI validation with simplified inputs
-                    is_valid, errors, warnings, suggestions, compliance_score, policy_compliance, policy_violations = ai_validate_travel_request(
+                    # Run simplified AI validation
+                    validation_result = ai_validate_travel_request(
                         destination=destination,
                         departure_date=departure_date,
                         return_date=return_date,
@@ -1985,380 +2259,158 @@ This is a preview analysis. Submit the form to get the complete validation with 
                         gemini_model=gemini_model
                     )
                     
-                    # Display validation results in real-time
-                    if is_valid:
-                        st.success(f"✅ AI Validation Passed - Compliance Score: {compliance_score:.1f}/100")
-                    else:
-                        st.warning(f"⚠️ Validation Issues Found - Compliance Score: {compliance_score:.1f}/100")
+                    # Display simplified validation results
+                    st.markdown(validation_result)
                     
-                    # Show critical errors if any
-                    if errors:
-                        st.error("**Critical Issues:**")
-                        for error in errors:
-                            st.error(f"• {error}")
-                    
-                    # === STEP 2: COMPREHENSIVE ANALYSIS & COST BREAKDOWN ===
-                    st.write("� **Step 2:** Generating detailed cost breakdown and eligibility analysis...")
-                    
-                    # Calculate enhanced cost breakdown
-                    duration = (return_date - departure_date).days
-                    cost_breakdown = {
-                        'flight_cost': estimated_cost * 0.6,  # 60% for flights
-                        'hotel_cost': estimated_cost * 0.25,  # 25% for hotels  
-                        'meals_cost': estimated_cost * 0.10,  # 10% for meals
-                        'transport_cost': estimated_cost * 0.05  # 5% for local transport
-                    }
-                    
-                    # Determine destination tier and limits
-                    international_destinations = {
-                        'london': {'tier': 'Tier 1', 'daily_limit': 400, 'visa': 'Required', 'currency': 'GBP', 'flight_cost': 800},
-                        'paris': {'tier': 'Tier 1', 'daily_limit': 380, 'visa': 'Required', 'currency': 'EUR', 'flight_cost': 750},
-                        'tokyo': {'tier': 'Tier 1', 'daily_limit': 420, 'visa': 'Required', 'currency': 'JPY', 'flight_cost': 1200},
-                        'singapore': {'tier': 'Tier 1', 'daily_limit': 350, 'visa': 'Required', 'currency': 'SGD', 'flight_cost': 1000},
-                        'new york': {'tier': 'Tier 2', 'daily_limit': 300, 'visa': 'Not Required', 'currency': 'USD', 'flight_cost': 400},
-                        'toronto': {'tier': 'Tier 2', 'daily_limit': 280, 'visa': 'Required', 'currency': 'CAD', 'flight_cost': 350},
-                        'mexico city': {'tier': 'Tier 3', 'daily_limit': 200, 'visa': 'Not Required', 'currency': 'MXN', 'flight_cost': 300}
-                    }
-                    
-                    dest_info = None
-                    for city, info in international_destinations.items():
-                        if city in destination.lower():
-                            dest_info = info
-                            break
-                    
-                    if not dest_info:
-                        dest_info = {'tier': 'Domestic', 'daily_limit': 250, 'visa': 'Not Required', 'currency': 'USD', 'flight_cost': 200}
-                    
-                    # Calculate detailed costs with realistic estimates
-                    realistic_costs = {
-                        'flight_cost': dest_info['flight_cost'],
-                        'hotel_cost': dest_info['daily_limit'] * 0.6 * duration,  # 60% of daily limit for hotels
-                        'meals_cost': dest_info['daily_limit'] * 0.3 * duration,  # 30% for meals
-                        'transport_cost': dest_info['daily_limit'] * 0.1 * duration  # 10% for transport
-                    }
-                    realistic_total = sum(realistic_costs.values())
-                    
-                    # Employee budget simulation (in real system, this would come from database)
-                    # For demo purposes, we'll use a reasonable budget based on email domain
-                    if 'manager' in employee_email.lower() or 'director' in employee_email.lower():
-                        employee_budget = 20000  # Managers get higher budget
-                    elif 'vp' in employee_email.lower() or 'executive' in employee_email.lower():
-                        employee_budget = 30000  # Executives get highest budget
-                    else:
-                        employee_budget = 15000  # Standard employee budget
-                    
-                    # Determine approval status based on actual budget and policies
-                    approval_status = "✅ APPROVED"
-                    status_details = []
-                    
-                    # Check against employee budget first
-                    if estimated_cost > employee_budget:
-                        approval_status = "❌ EXCEEDS EMPLOYEE BUDGET"
-                        status_details.append(f"Cost ${estimated_cost:,} exceeds your annual budget ${employee_budget:,}")
-                    # Check for reasonableness compared to market rates
-                    elif estimated_cost > realistic_total * 2.0:  # More generous threshold
-                        approval_status = "⚠️ COST REVIEW REQUIRED"
-                        status_details.append("Cost significantly higher than market estimates - requires justification")
-                    # Standard approval thresholds
-                    elif estimated_cost > 5000:
-                        approval_status = "🔍 VP APPROVAL REQUIRED"
-                        status_details.append("High cost requires executive approval")
-                    elif estimated_cost > 3000:
-                        approval_status = "⚠️ DIRECTOR APPROVAL REQUIRED"
-                        status_details.append("Medium cost requires director approval")
-                    # Check travel class appropriateness
-                    elif travel_class in ["Business Class", "First Class"] and duration < 6:
-                        approval_status = "⚠️ CLASS DOWNGRADE RECOMMENDED"
-                        status_details.append("Premium class not justified for short trips")
-                    
-                    # Override if AI compliance score is too low
-                    if compliance_score < 50:
-                        approval_status = "❌ POLICY VIOLATIONS"
-                        status_details.append("Multiple policy violations detected")
-                    elif compliance_score < 70 and approval_status == "✅ APPROVED":
-                        approval_status = "⚠️ CONDITIONAL APPROVAL"
-                        status_details.append("Minor policy issues - requires manager review")
-                    
-                    # Budget comparison logic fix
-                    budget_status = "✅ Within Budget"
-                    if estimated_cost <= employee_budget:
-                        if estimated_cost <= realistic_total:
-                            budget_status = "✅ Excellent - Under market rate"
-                        elif estimated_cost <= realistic_total * 1.2:
-                            budget_status = "✅ Good - Reasonable cost"
+                    # Check if request was rejected OR pending - if so, stop here
+                    if "❌ REJECTED" in validation_result or "⏳ PENDING" in validation_result:
+                        if "❌ REJECTED" in validation_result:
+                            st.error("🚫 **Request processing stopped due to rejection.**")
+                            st.info("📝 Please review the issues above and submit a corrected request.")
                         else:
-                            budget_status = "⚠️ Higher than typical - justify if needed"
-                    else:
-                        budget_status = "❌ Exceeds your annual budget"
+                            st.warning("⏳ **Request is pending approval - processing paused.**")
+                            st.info("📋 Your request has been submitted for approval. You will be notified when approved.")
+                            st.info("💡 **Next Steps:** Wait for manager/director approval before proceeding with travel planning.")
+                        st.stop()  # Stop execution here for both rejected and pending requests
                     
-                    # Generate the comprehensive result
-                    result_content = f"""
-# 🎯 AI Travel Request Analysis & Eligibility Report
-
-## {approval_status}
-**Overall Compliance Score: {compliance_score:.1f}/100** | **Trip: {destination} ({duration} days)**
-
----
-
-## 💰 Detailed Cost Analysis & Budget Check
-
-### � Your Request vs. Company Guidelines
-| Category | Your Estimate | Realistic Cost | Company Limit | Status |
-|----------|---------------|----------------|---------------|---------|
-| ✈️ **Flights** | ${cost_breakdown['flight_cost']:,.0f} | ${realistic_costs['flight_cost']:,.0f} | Varies by destination | {'✅ Reasonable' if cost_breakdown['flight_cost'] <= realistic_costs['flight_cost'] * 1.2 else '⚠️ High'} |
-| 🏨 **Hotels** | ${cost_breakdown['hotel_cost']:,.0f} | ${realistic_costs['hotel_cost']:,.0f} | ${dest_info['daily_limit'] * 0.6:.0f}/night | {'✅ Within Limit' if cost_breakdown['hotel_cost'] <= realistic_costs['hotel_cost'] * 1.1 else '❌ Exceeds Limit'} |
-| 🍽️ **Meals** | ${cost_breakdown['meals_cost']:,.0f} | ${realistic_costs['meals_cost']:,.0f} | ${dest_info['daily_limit'] * 0.3:.0f}/day | {'✅ Within Limit' if cost_breakdown['meals_cost'] <= realistic_costs['meals_cost'] * 1.1 else '❌ Exceeds Limit'} |
-| 🚗 **Transport** | ${cost_breakdown['transport_cost']:,.0f} | ${realistic_costs['transport_cost']:,.0f} | ${dest_info['daily_limit'] * 0.1:.0f}/day | {'✅ Within Limit' if cost_breakdown['transport_cost'] <= realistic_costs['transport_cost'] * 1.1 else '❌ Exceeds Limit'} |
-
-### � **Total Cost Comparison:**
-### 💵 **Budget Analysis:**
-- **Your Estimate:** ${estimated_cost:,.0f}
-- **Your Annual Budget:** ${employee_budget:,.0f}
-- **Remaining Budget:** ${employee_budget - estimated_cost:,.0f}
-- **Market Comparison:** ${realistic_total:,.0f} (typical cost)
-- **Budget Status:** {budget_status}
-
-### 📊 **Cost Efficiency:**
-- **vs Your Budget:** {((estimated_cost / employee_budget) * 100):.1f}% of annual limit
-- **vs Market Rate:** {((estimated_cost / realistic_total) * 100):.1f}% of typical cost
-- **Savings Opportunity:** ${max(0, estimated_cost - realistic_total):,.0f} potential savings available
-
----
-
-## 🌍 Destination Information: {destination}
-
-### 📍 **Location Details:**
-- **Classification:** {dest_info['tier']} destination
-- **Daily Expense Limit:** ${dest_info['daily_limit']}/day
-- **Visa Requirement:** {dest_info['visa']}
-- **Currency:** {dest_info['currency']}
-- **Estimated Flight Cost:** ${dest_info['flight_cost']}
-
-### 🏨 **Accommodation Guidelines:**
-- **Recommended Hotels:** {hotel_preference}
-- **Max Hotel Rate:** ${dest_info['daily_limit'] * 0.6:.0f}/night
-- **Your Hotel Budget:** ${cost_breakdown['hotel_cost']/duration:.0f}/night
-- **Status:** {'✅ Within policy' if cost_breakdown['hotel_cost']/duration <= dest_info['daily_limit'] * 0.6 else '❌ Exceeds policy'}
-
----
-
-## 📋 Policy Compliance Analysis
-
-### ✅ **Company Policy Check:**
-"""
+                    # === AI TRAVEL PLANNING ===
+                    st.write("🤖 **Generating AI Travel Plan...**")
                     
-                    # Add specific policy checks
-                    policy_issues = []
-                    policy_compliant = []
+                    # Generate AI travel plan
+                    ai_travel_plan = generate_ai_travel_plan(
+                        gemini_model=gemini_model,
+                        destination=destination,
+                        departure_date=departure_date,
+                        return_date=return_date,
+                        estimated_cost=estimated_cost,
+                        policies=policies_cache,
+                        purpose=purpose,
+                        travel_class=travel_class,
+                        hotel_preference=hotel_preference
+                    )
                     
-                    # Flight class policy
-                    if travel_class == "Economy":
-                        policy_compliant.append("✅ Flight class: Economy selected (compliant)")
-                    elif travel_class == "Business Class" and duration >= 6:
-                        policy_compliant.append("✅ Flight class: Business justified for long trip")
-                    else:
-                        policy_issues.append("❌ Flight class: Premium class not justified for trip duration")
+                    # Display AI travel plan
+                    st.markdown("### ✈️ AI-Generated Travel Plan")
+                    st.markdown("*The following information is for reference only.*")
+                    st.markdown(ai_travel_plan)
                     
-                    # Cost policy
-                    daily_cost = estimated_cost / duration
-                    if daily_cost <= dest_info['daily_limit']:
-                        policy_compliant.append("✅ Daily expenses: Within company limits")
-                    else:
-                        policy_issues.append(f"❌ Daily expenses: ${daily_cost:.0f}/day exceeds ${dest_info['daily_limit']}/day limit")
+                    # === DETAILED TRAVEL INFORMATION (Requirement 4) ===
+                    st.write("🌍 **Generating Detailed Travel Information...**")
                     
-                    # Duration policy
-                    if duration <= 14:
-                        policy_compliant.append("✅ Trip duration: Within standard limits")
-                    else:
-                        policy_issues.append("❌ Trip duration: Extended travel requires special approval")
+                    # Get comprehensive travel information
+                    travel_info = get_travel_information(destination, departure_date, return_date)
                     
-                    # Add policy results to content
-                    if policy_compliant:
-                        for item in policy_compliant:
-                            result_content += f"{item}\n"
+                    # Display detailed travel information in organized sections
+                    st.markdown("### 📋 *Comprehensive Travel Information*")
                     
-                    if policy_issues:
-                        result_content += "\n**❌ Policy Violations Found:**\n"
-                        for item in policy_issues:
-                            result_content += f"{item}\n"
+                    # Destination Information
+                    with st.expander("🌍 **Destination Information**", expanded=True):
+                        dest_info = travel_info['destination_info']
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**Country:** {dest_info.get('country', 'N/A')}")
+                            st.write(f"**Language:** {dest_info.get('language', 'N/A')}")
+                            st.write(f"**Currency:** {dest_info.get('currency', 'N/A')}")
+                        with col2:
+                            st.write(f"**Business Hours:** {dest_info.get('business_hours', 'N/A')}")
+                            st.write(f"**Transportation:** {dest_info.get('transportation', 'N/A')}")
+                        st.write(f"**Cultural Notes:** {dest_info.get('cultural_notes', 'N/A')}")
+                        st.write(f"**Business Districts:** {dest_info.get('business_districts', 'N/A')}")
                     
-                    # Add AI validation results
-                    if errors:
-                        result_content += "\n**🚨 Critical Issues:**\n"
-                        for error in errors[:3]:
-                            result_content += f"• {error}\n"
+                    # Travel Advisories
+                    with st.expander("🛡️ **Travel Advisories & Safety**"):
+                        advisories = travel_info['travel_advisories']
+                        st.write(f"**Safety Level:** {advisories.get('safety_level', 'N/A')}")
+                        st.write(f"**Health Requirements:** {advisories.get('health_requirements', 'N/A')}")
+                        st.write(f"**Documentation:** {advisories.get('documentation', 'N/A')}")
+                        st.write(f"**COVID Restrictions:** {advisories.get('covid_restrictions', 'N/A')}")
+                        
+                        emergency = advisories.get('emergency_contacts', {})
+                        st.write("**Emergency Contacts:**")
+                        st.write(f"• Local Emergency: {emergency.get('local_emergency', 'N/A')}")
+                        st.write(f"• Embassy: {emergency.get('embassy', 'N/A')}")
                     
-                    if warnings:
-                        result_content += "\n**⚠️ Warnings:**\n"
-                        for warning in warnings[:3]:
-                            result_content += f"• {warning}\n"
+                    # Cost Estimates
+                    with st.expander("💰 **Detailed Cost Breakdown**"):
+                        costs = travel_info['estimated_costs']
+                        duration = costs.get('duration_days', 1)
+                        
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.metric("Accommodation", f"RM{costs.get('accommodation', 0):.0f}")
+                            st.metric("Meals", f"RM{costs.get('meals', 0):.0f}")
+                        with col2:
+                            st.metric("Local Transport", f"RM{costs.get('local_transport', 0):.0f}")
+                            st.metric("Total Estimate", f"RM{costs.get('total_estimate', 0):.0f}")
+                        
+                        st.write(f"**Cost Tier:** {costs.get('cost_tier', 'N/A')}")
+                        st.write(f"**Duration:** {duration} days")
+                        
+                        daily = costs.get('daily_breakdown', {})
+                        if daily:
+                            st.write("**Daily Breakdown:**")
+                            st.write(f"• Hotel: RM{daily.get('hotel', 0)}/night")
+                            st.write(f"• Meals: RM{daily.get('meals', 0)}/day")
+                            st.write(f"• Transport: RM{daily.get('transport', 0)}/day")
                     
-                    # Add eligibility determination
-                    result_content += f"""
-
----
-
-## 🎯 ELIGIBILITY DETERMINATION
-
-### 📊 **Final Status: {approval_status}**
-"""
+                    # Currency & Banking
+                    with st.expander("💱 **Currency & Banking Information**"):
+                        currency = travel_info['currency_info']
+                        st.write(f"**Local Currency:** {currency.get('local_currency', 'N/A')}")
+                        st.write(f"**Exchange Rate:** {currency.get('exchange_rate', 'N/A')}")
+                        st.write(f"**Payment Methods:** {currency.get('payment_methods', 'N/A')}")
+                        st.write(f"**Cash Recommendations:** {currency.get('cash_recommendations', 'N/A')}")
+                        st.write(f"**Banking:** {currency.get('banking', 'N/A')}")
                     
-                    for detail in status_details:
-                        result_content += f"• {detail}\n"
+                    # Time Zone Information
+                    with st.expander("🕐 **Time Zone & Schedule Information**"):
+                        timezone = travel_info['time_zone']
+                        st.write(f"**Local Time:** {timezone.get('local_time', 'N/A')}")
+                        st.write(f"**Time Difference:** {timezone.get('time_difference', 'N/A')}")
+                        st.write(f"**Business Hours (Local):** {timezone.get('business_hours_local', 'N/A')}")
+                        
+                        if timezone.get('jet_lag_tips'):
+                            st.write("**Jet Lag Tips:**")
+                            for tip in timezone['jet_lag_tips']:
+                                st.write(f"• {tip}")
                     
-                    if approval_status == "✅ APPROVED":
-                        result_content += f"""
-**✅ YOUR REQUEST IS APPROVED FOR SUBMISSION**
-- Budget status: {budget_status}
-- Estimated cost: ${estimated_cost:,} (within your ${employee_budget:,} annual limit)
-- All policies met - standard approval process applies
-- Processing time: 2-3 business days
-"""
-                    elif "BUDGET" in approval_status:
-                        result_content += f"""
-**❌ BUDGET ISSUE DETECTED**
-- Your estimate: ${estimated_cost:,}
-- Your annual limit: ${employee_budget:,} 
-- Shortfall: ${estimated_cost - employee_budget:,}
-- Action required: Reduce cost or request budget increase
-"""
-                    elif "REQUIRED" in approval_status:
-                        result_content += f"""
-**⚠️ HIGHER APPROVAL REQUIRED**
-- Budget status: {budget_status}
-- Cost: ${estimated_cost:,} (within your ${employee_budget:,} limit)
-- Requires executive review due to amount
-- Processing time: 5-7 business days
-"""
-                    elif "REVIEW" in approval_status:
-                        result_content += f"""
-**🔍 COST REVIEW REQUIRED**
-- Budget status: {budget_status}
-- Your cost: ${estimated_cost:,} vs market rate: ${realistic_total:,}
-- Justification needed for higher-than-typical cost
-- Manager review required
-"""
-                    else:
-                        result_content += """
-**❌ REQUEST NEEDS REVISION**
-- Policy violations must be addressed
-- Cost adjustments required
-- Resubmit after corrections
-"""
-                    
-                    # Add smart suggestions
-                    if suggestions:
-                        result_content += """
-
----
-
-## 💡 AI Smart Recommendations
-
-### 🎯 **Cost Optimization Suggestions:**
-"""
-                        for i, suggestion in enumerate(suggestions[:3], 1):
-                            if isinstance(suggestion, dict):
-                                result_content += f"{i}. **{suggestion.get('area', 'General')}:** {suggestion.get('tip', suggestion)}\n"
+                    # Check if request was approved for calendar creation
+                    if "✅ APPROVED" in validation_result or "Request ID:" in validation_result:
+                        st.write("📅 **Generating travel calendar...**")
+                        try:
+                            # Create comprehensive travel calendar
+                            result = create_comprehensive_travel_calendar(
+                                destination=destination,
+                                departure_date=departure_date,
+                                return_date=return_date,
+                                purpose=purpose or "Business Travel",
+                                travel_class=travel_class,
+                                hotel_preference=hotel_preference or "3-star",
+                                estimated_cost=estimated_cost or 0,
+                                employee_email=employee_email
+                            )
+                            
+                            if result and result[0]:  # Check if function returned valid results
+                                calendar_filename, event_count, calendar_path = result
+                                
+                                # Read the calendar content from the file
+                                with open(calendar_path, 'r', encoding='utf-8') as f:
+                                    calendar_content = f.read()
+                                
+                                st.success(f"✅ Travel calendar generated successfully! ({event_count} events created)")
+                                st.session_state['calendar_content'] = calendar_content
+                                st.session_state['calendar_filename'] = calendar_filename
                             else:
-                                result_content += f"{i}. {suggestion}\n"
+                                st.error("Failed to generate calendar")
+                        except Exception as cal_e:
+                            st.warning(f"Calendar generation failed: {str(cal_e)}")
                     
-                    # Add estimated savings
-                    if estimated_cost > realistic_total:
-                        potential_savings = estimated_cost - realistic_total
-                        result_content += f"""
-
-### 💰 **Potential Savings: ${potential_savings:,.0f}**
-- Switch to economy class: Save ~${(estimated_cost * 0.3 if travel_class != 'Economy' else 0):,.0f}
-- Choose standard hotels: Save ~${max(0, cost_breakdown['hotel_cost'] - realistic_costs['hotel_cost']):,.0f}
-- Optimize meal expenses: Save ~${max(0, cost_breakdown['meals_cost'] - realistic_costs['meals_cost']):,.0f}
-"""
-                    
-                    # Add next steps
-                    result_content += f"""
-
----
-
-## 📞 Next Steps & Required Actions
-
-### 🔄 **Immediate Actions Required:**
-1. **Budget Status:** {budget_status} - Your ${estimated_cost:,} request vs ${employee_budget:,} annual limit
-2. **Policy Review:** {'Address policy violations' if policy_issues else 'All policies compliant ✅'}
-3. **Cost Optimization:** {'Consider cost reduction opportunities above' if estimated_cost > realistic_total * 1.2 else 'Cost appears reasonable'}
-4. **Approval Process:** {'VP approval required (5-7 days)' if estimated_cost > 5000 else 'Standard approval (2-3 days)'}
-
-### 📋 **Budget Summary:**
-- **Annual Travel Budget:** ${employee_budget:,}
-- **This Request:** ${estimated_cost:,}
-- **Budget Utilization:** {((estimated_cost / employee_budget) * 100):.1f}%
-- **Remaining After Trip:** ${employee_budget - estimated_cost:,}
-
-### 📊 **Request Details:**
-- **Request ID:** TRQ_{datetime.now().strftime('%Y%m%d_%H%M%S')}
-- **Employee:** {employee_email}
-- **Compliance Score:** {compliance_score:.1f}/100
-- **Final Status:** {approval_status}
-- **Processing Time:** {'5-7 business days' if estimated_cost > 5000 else '2-3 business days'}
-
-### 📱 **Support Contacts:**
-- **Policy Questions:** hr@company.com
-- **Travel Booking:** travel@company.com  
-- **Budget Issues:** finance@company.com
-- **Emergency Travel:** +1-800-EMERGENCY
-
-### 🎯 **Pro Tips:**
-- Book flights 3-4 weeks in advance for better rates
-- Use company preferred hotels for automatic approval
-- Keep all receipts for expense reporting
-- Consider travel insurance for international trips
-"""
-                    
-                    # Update session state with the comprehensive result
-                    st.session_state.travel_result = result_content
-                    st.session_state.travel_history.append({
-                        "request_id": f"TRQ_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-                        "destination": destination,
-                        "cost": estimated_cost,
-                        "travel_class": travel_class,
-                        "status": approval_status,
-                        "compliance_score": compliance_score,
-                        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "result": result_content
-                    })
-                    
-                    st.rerun()
+                    st.write("✅ **Travel request processed successfully!**")
                     
                 except Exception as e:
-                    error_content = f"""
-## ❌ System Processing Error
-
-### � Error Details
-- **Error Type:** {type(e).__name__}
-- **Details:** {str(e)}
-- **Timestamp:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-
-### 💼 Request Information
-- **Destination:** {destination}
-- **Travel Class:** {travel_class}
-- **Purpose:** {purpose}
-- **Estimated Cost:** ${estimated_cost:,.2f}
-
-### � Support Actions
-1. Check all form fields are properly filled
-2. Try submitting again in a few minutes
-3. Contact IT support if problem persists
-4. For urgent requests, contact manager directly
-
-### � Troubleshooting
-- Verify internet connection
-- Check if all required fields are completed
-- Try refreshing the page
-- Contact support: tech-support@company.com
-"""
-                    st.session_state.travel_result = error_content
-                    st.rerun()
+                    st.error(f"❌ Processing error: {str(e)}")
                     
         else:
-            st.error("❌ Please fill in all required fields: Destination, Dates, Cost, Purpose, Email, and Hotel Preference")
-
+            st.error("❌ Please fill in all required fields")
 
 # End of application

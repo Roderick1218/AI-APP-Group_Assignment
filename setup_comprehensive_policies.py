@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 不用看
 """
 Complete Travel Policy Database Setup
 This script creates comprehensive travel policies for the AI assistant

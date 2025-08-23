@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
 =======================================================================
-DATABASE_MANAGER.PY - 统一数据库管理模块
+DATABASE_MANAGER.PY - Unified Database Management Module
 =======================================================================
 
-本文件包含所有与数据库相关的功能，包括：
-• 数据库连接和配置
-• 政策数据管理 (CRUD操作)
-• 员工数据管理
-• 旅行请求管理
-• 审批工作流管理
-• 数据库初始化和设置
-• 数据验证和测试功能
+This file contains all database-related functionality, including:
+• Database connection and configuration
+• Policy data management (CRUD operations)
+• Employee data management
+• Travel request management
+• Approval workflow management
+• Database initialization and setup
+• Data validation and testing functionality
 
-作者: AI Assistant
-日期: 2025-08-21
-版本: v1.0 - 企业旅行政策管理系统
+Author: AI Assistant
+Date: 2025-08-21
+Version: v1.0 - Enterprise Travel Policy Management System
 =======================================================================
 """
 
@@ -25,21 +25,21 @@ from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
-# 加载环境变量
+# Load environment variables
 load_dotenv()
 
 # =======================================================================
-# 📊 DATABASE CONFIGURATION - 数据库配置管理
+# 📊 DATABASE CONFIGURATION - Database Configuration Management
 # =======================================================================
 
 class DatabaseConfig:
-    """数据库配置管理类"""
+    """Database configuration management class"""
     
     def __init__(self):
         self.USE_ONLINE_DATABASE = os.getenv("USE_ONLINE_DATABASE", "true").lower() == "true"
         self.DATABASE_ONLINE_URL = os.getenv("DATABASE_ONLINE")
         
-        # 本地数据库配置
+        # Local database configuration
         self.DB_HOST = os.getenv("DB_HOST", "localhost")
         self.DB_PORT = os.getenv("DB_PORT", "5432")
         self.DB_NAME = os.getenv("DB_NAME", "travel_db")
@@ -47,10 +47,10 @@ class DatabaseConfig:
         self.DB_PASSWORD = os.getenv("DB_PASSWORD", "0183813235")
     
     def get_database_url(self):
-        """获取数据库连接URL"""
+        """Get database connection URL"""
         if self.USE_ONLINE_DATABASE and self.DATABASE_ONLINE_URL:
             try:
-                # 测试在线数据库连接
+                # Test online database connection
                 conn = psycopg2.connect(self.DATABASE_ONLINE_URL)
                 conn.close()
                 print("✅ Successfully connected to online Prisma database")
@@ -59,28 +59,28 @@ class DatabaseConfig:
                 print(f"❌ Online connection failed: {e}")
                 print("🔄 Falling back to local PostgreSQL...")
         
-        # 使用本地数据库
+        # Use local database
         local_url = f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         print("📍 Using local PostgreSQL database...")
         return local_url
     
     def get_engine(self):
-        """获取SQLAlchemy引擎"""
+        """Get SQLAlchemy engine"""
         return create_engine(self.get_database_url())
 
-# 全局数据库配置实例
+# Global database configuration instance
 db_config = DatabaseConfig()
 
 # =======================================================================
-# 📋 TRAVEL POLICY MANAGEMENT - 旅行政策管理
+# 📋 TRAVEL POLICY MANAGEMENT - Travel Policy Management
 # =======================================================================
 
 class TravelPolicyManager:
-    """旅行政策数据管理类"""
+    """Travel policy data management class"""
     
     @staticmethod
     def load_policies():
-        """从数据库加载所有旅行政策"""
+        """Load all travel policies from database"""
         try:
             engine = db_config.get_engine()
             
@@ -106,7 +106,7 @@ class TravelPolicyManager:
     
     @staticmethod
     def get_default_policies():
-        """获取默认旅行政策（数据库不可用时的备用方案）"""
+        """Get default travel policies (fallback when database is unavailable)"""
         return [
             {
                 'rule_name': 'Flight Booking Policy',
@@ -137,7 +137,7 @@ class TravelPolicyManager:
     
     @staticmethod
     def setup_comprehensive_policies():
-        """设置完整的旅行政策数据"""
+        """Setup comprehensive travel policy data"""
         comprehensive_policies = [
             # Flight Policies
             {
@@ -272,12 +272,12 @@ class TravelPolicyManager:
             engine = db_config.get_engine()
             
             with engine.connect() as connection:
-                # 清除现有政策
+                # Clear existing policies
                 print("🗑️ Clearing existing policies...")
                 connection.execute(text("DELETE FROM travel_policies"))
                 connection.commit()
                 
-                # 插入新政策
+                # Insert new policies
                 print(f"📥 Inserting {len(comprehensive_policies)} comprehensive travel policies...")
                 
                 for policy in comprehensive_policies:
@@ -294,7 +294,7 @@ class TravelPolicyManager:
                 
                 connection.commit()
                 
-                # 验证插入
+                # Verify insertion
                 result = connection.execute(text("SELECT COUNT(*) FROM travel_policies"))
                 count = result.fetchone()[0]
                 
@@ -306,15 +306,15 @@ class TravelPolicyManager:
             return False
 
 # =======================================================================
-# 👥 EMPLOYEE MANAGEMENT - 员工数据管理
+# 👥 EMPLOYEE MANAGEMENT - Employee Data Management
 # =======================================================================
 
 class EmployeeManager:
-    """员工数据管理类"""
+    """Employee data management class"""
     
     @staticmethod
     def get_employee_data(employee_id):
-        """获取员工信息"""
+        """Get employee information"""
         try:
             engine = db_config.get_engine()
             
@@ -341,7 +341,7 @@ class EmployeeManager:
     
     @staticmethod
     def update_employee_budget(employee_id, new_budget):
-        """更新员工预算"""
+        """Update employee budget"""
         try:
             engine = db_config.get_engine()
             
@@ -363,16 +363,16 @@ class EmployeeManager:
             return False
 
 # =======================================================================
-# 🧾 TRAVEL REQUEST MANAGEMENT - 旅行请求管理
+# 🧾 TRAVEL REQUEST MANAGEMENT - Travel Request Management
 # =======================================================================
 
 class TravelRequestManager:
-    """旅行请求管理类"""
+    """Travel request management class"""
     
     @staticmethod
     def submit_travel_request(employee_id, destination, departure_date, return_date, 
                             estimated_cost, purpose, business_justification):
-        """提交旅行请求"""
+        """Submit travel request"""
         try:
             engine = db_config.get_engine()
             
@@ -408,7 +408,7 @@ class TravelRequestManager:
     
     @staticmethod
     def get_travel_request(request_id):
-        """获取旅行请求详情"""
+        """Get travel request details"""
         try:
             engine = db_config.get_engine()
             
@@ -428,21 +428,21 @@ class TravelRequestManager:
             return None
 
 # =======================================================================
-# ✅ APPROVAL WORKFLOW MANAGEMENT - 审批工作流管理
+# ✅ APPROVAL WORKFLOW MANAGEMENT - Approval Workflow Management
 # =======================================================================
 
 class ApprovalWorkflowManager:
-    """审批工作流管理类"""
+    """Approval workflow management class"""
     
     @staticmethod
     def create_approval_workflow(request_id, approval_steps):
-        """创建审批工作流"""
+        """Create approval workflow"""
         try:
             engine = db_config.get_engine()
             
             with engine.connect() as connection:
                 for step in approval_steps:
-                    # 查找审批人
+                    # Find approver
                     approver_result = connection.execute(
                         text("""
                             SELECT employee_id, first_name, last_name, email
@@ -461,7 +461,7 @@ class ApprovalWorkflowManager:
                     if approver:
                         approver_id = approver[0]
                         
-                        # 创建审批步骤
+                        # Create approval step
                         connection.execute(
                             text("""
                                 INSERT INTO approval_workflows
@@ -486,27 +486,27 @@ class ApprovalWorkflowManager:
             return False
 
 # =======================================================================
-# 🧪 DATABASE TESTING AND VALIDATION - 数据库测试验证
+# 🧪 DATABASE TESTING AND VALIDATION - Database Testing and Validation
 # =======================================================================
 
 class DatabaseValidator:
-    """数据库验证和测试类"""
+    """Database validation and testing class"""
     
     @staticmethod
     def verify_database_setup():
-        """验证数据库设置和数据完整性"""
+        """Verify database setup and data integrity"""
         try:
             engine = db_config.get_engine()
             
             print("🔗 Connecting to database...")
             
             with engine.connect() as connection:
-                # 检查政策总数
+                # Check total policy count
                 result = connection.execute(text("SELECT COUNT(*) FROM travel_policies"))
                 total_count = result.fetchone()[0]
                 print(f"📊 Total policies in database: {total_count}")
                 
-                # 检查政策分类
+                # Check policy categories
                 categories = [
                     ('Flight', ['flight', 'air', 'plane']),
                     ('Hotel', ['hotel', 'accommodation']),
@@ -535,7 +535,7 @@ class DatabaseValidator:
     
     @staticmethod
     def test_policy_search():
-        """测试政策搜索功能"""
+        """Test policy search functionality"""
         print("\\n🔍 Testing policy search functionality...")
         
         test_queries = [
@@ -558,23 +558,23 @@ class DatabaseValidator:
         return True
 
 # =======================================================================
-# 🚀 MAIN SETUP AND INITIALIZATION - 主要设置和初始化
+# 🚀 MAIN SETUP AND INITIALIZATION - Main Setup and Initialization
 # =======================================================================
 
 def initialize_database():
-    """初始化数据库（设置完整的政策数据）"""
+    """Initialize database (setup comprehensive policy data)"""
     print("🚀 Initializing Travel Policy Database...")
     print("=" * 60)
     
-    # 设置完整政策
+    # Setup comprehensive policies
     if TravelPolicyManager.setup_comprehensive_policies():
         print("\\n✅ Policy setup completed!")
         
-        # 验证数据库
+        # Verify database
         if DatabaseValidator.verify_database_setup():
             print("\\n✅ Database verification passed!")
             
-            # 测试搜索功能
+            # Test search functionality
             DatabaseValidator.test_policy_search()
             
             print("\\n🎉 Database initialization completed successfully!")
@@ -584,29 +584,29 @@ def initialize_database():
     return False
 
 # =======================================================================
-# 📚 UTILITY FUNCTIONS - 实用工具函数
+# 📚 UTILITY FUNCTIONS - Utility Functions
 # =======================================================================
 
 def get_database_stats():
-    """获取数据库统计信息"""
+    """Get database statistics"""
     try:
         engine = db_config.get_engine()
         
         with engine.connect() as connection:
             stats = {}
             
-            # 政策数量
+            # Policy count
             result = connection.execute(text("SELECT COUNT(*) FROM travel_policies"))
             stats['total_policies'] = result.fetchone()[0]
             
-            # 员工数量
+            # Employee count
             try:
                 result = connection.execute(text("SELECT COUNT(*) FROM employees"))
                 stats['total_employees'] = result.fetchone()[0]
             except:
                 stats['total_employees'] = 0
             
-            # 旅行请求数量
+            # Travel request count
             try:
                 result = connection.execute(text("SELECT COUNT(*) FROM travel_requests"))
                 stats['total_requests'] = result.fetchone()[0]
@@ -620,41 +620,41 @@ def get_database_stats():
         return {'total_policies': 0, 'total_employees': 0, 'total_requests': 0}
 
 # =======================================================================
-# 🎯 EXPORT FUNCTIONS - 导出函数 (供app.py使用)
+# 🎯 EXPORT FUNCTIONS - Export Functions (for use by app.py)
 # =======================================================================
 
-# 数据库配置
+# Database configuration
 def get_database_url():
-    """获取数据库URL (供app.py使用)"""
+    """Get database URL (for use by app.py)"""
     return db_config.get_database_url()
 
-# 政策管理
+# Policy management
 def load_policies():
-    """加载政策 (供app.py使用)"""
+    """Load policies (for use by app.py)"""
     return TravelPolicyManager.load_policies()
 
 def get_default_policies():
-    """获取默认政策 (供app.py使用)"""
+    """Get default policies (for use by app.py)"""
     return TravelPolicyManager.get_default_policies()
 
-# 员工管理
+# Employee management
 def get_employee_data(employee_id):
-    """获取员工数据 (供app.py使用)"""
+    """Get employee data (for use by app.py)"""
     return EmployeeManager.get_employee_data(employee_id)
 
-# 旅行请求管理
+# Travel request management
 def submit_travel_request(employee_id, destination, departure_date, return_date, 
                          estimated_cost, purpose, business_justification):
-    """提交旅行请求 (供app.py使用)"""
+    """Submit travel request (for use by app.py)"""
     return TravelRequestManager.submit_travel_request(
         employee_id, destination, departure_date, return_date,
         estimated_cost, purpose, business_justification
     )
 
 # =======================================================================
-# 🏃‍♂️ MAIN EXECUTION - 主程序执行
+# 🏃‍♂️ MAIN EXECUTION - Main Program Execution
 # =======================================================================
 
 if __name__ == "__main__":
-    # 如果直接运行此文件，执行数据库初始化
+    # If running this file directly, execute database initialization
     initialize_database()
