@@ -1,0 +1,227 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:Enterprise Travel Management System
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 5 - Business Schedule\n\n🎯 PURPOSE: Business Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Business Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20241224T120000Z
+LOCATION:Singapore
+DTSTART:20241224T090000Z
+SUMMARY:💼 Business Activities - Day 5
+UID:9fdb3884-fda4-41fe-af7b-abc21a8b75ab@9fdb.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT3H
+END:VALARM
+DESCRIPTION:\n✈️ FLIGHT INFORMATION:\n• Travel Class: Economy\n• Estimated Duration: 4 hours\n• Destination: Singapore\n\n🎯 In-flight productivity:\n• Review meeting materials\n• Prepare presentation notes\n• Update project status\n• Plan daily schedule\n\n📱 Upon Arrival:\n• Confirm hotel check-in\n• Update arrival status to team\n• Set up local transportation\n
+DTEND:20241220T120000Z
+LOCATION:Airport Departure Terminal
+DTSTART:20241220T080000Z
+SUMMARY:🛫 Flight Departure to Singapore
+UID:d654345c-cfed-46af-b533-1fe7e6c108aa@d654.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT3H
+END:VALARM
+DESCRIPTION:\n✈️ RETURN FLIGHT INFORMATION:\n• Departure: Singapore\n• Travel Class: Economy\n• Estimated Duration: 4 hours\n\n🎯 In-flight Tasks:\n• Trip summary notes\n• Action items review\n• Expense report draft\n• Follow-up planning\n\n📱 Post-arrival Tasks:\n• Confirm safe arrival\n• Submit travel completion report\n• Upload expense receipts\n• Schedule follow-up meetings\n
+DTEND:20241225T180000Z
+LOCATION:Singapore Airport
+DTSTART:20241225T140000Z
+SUMMARY:🛬 Return Flight from Singapore
+UID:39b0295b-4399-4bf1-9263-a27367920b8d@39b0.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM5\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20241222T203000Z
+DTSTART:20241222T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 3
+UID:47fc0b97-6008-49b1-80f9-251bafba369a@47fc.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Business Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20241222T170000Z
+LOCATION:Singapore
+DTSTART:20241222T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 3
+UID:42a14f3c-294d-45a7-bf5a-81d0df20b319@42a1.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT1H
+END:VALARM
+DESCRIPTION:\n🧳 DEPARTURE CHECKLIST:\n• Check-in online (24h before)\n• Pack business attire for Business Meeting\n• Travel documents & ID\n• Phone chargers & adapters\n• Business cards & materials\n• Company laptop & charger\n\n📱 Final confirmations:\n• Flight status check\n• Ground transportation\n• Hotel reservation\n• First day meeting schedule\n
+DTEND:20241220T060000Z
+DTSTART:20241220T040000Z
+SUMMARY:✈️ Departure Preparation - Singapore
+UID:e3a369e0-cb4c-4afd-b470-757b032b4c3a@e3a3.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 3 - Business Schedule\n\n🎯 PURPOSE: Business Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Business Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20241222T120000Z
+LOCATION:Singapore
+DTSTART:20241222T090000Z
+SUMMARY:💼 Business Activities - Day 3
+UID:3ad5127f-0317-4648-bb14-226455468fd4@3ad5.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT2H
+END:VALARM
+DESCRIPTION:\n💰 EXPENSE REPORT FINAL SUBMISSION\n\n📊 Final Tasks:\n• Review all expense entries\n• Ensure all receipts uploaded\n• Verify total amounts\n• Submit for manager approval\n\n💼 Trip Summary Required:\n• Business objectives achieved\n• Total expenses: RM5\,000.00 budgeted\n• ROI and business value\n• Future recommendations\n\n⚠️ IMPORTANT: Expense reports must be submitted within 5 business days of return\n
+DTEND:20241230T173000Z
+DTSTART:20241230T170000Z
+SUMMARY:💰 Expense Report Deadline - Singapore Trip
+UID:1b24f0c2-a93a-4fa5-bcca-51de2d4f93f1@1b24.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Business Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20241224T170000Z
+LOCATION:Singapore
+DTSTART:20241224T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 5
+UID:abdf7182-eafa-49c3-8ed0-63503e1eed69@abdf.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1W
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT2H
+END:VALARM
+DESCRIPTION:\n📋 BUSINESS TRAVEL DETAILS\n═══════════════════════════\n🎯 Purpose: Business Meeting\n✈️ Travel Class: Economy\n🏨 Hotel: 4-star\n💰 Budget: RM5\,000.00\n👤 Employee: test@newera.edu.my\n📞 Emergency: +1-800-TRAVEL-HELP\n\n🔔 IMPORTANT REMINDERS:\n• Passport & travel documents\n• Expense tracking app\n• Company credit card\n• Travel insurance confirmation\n• Emergency contact information\n\n💼 BUSINESS OBJECTIVES:\n• Review and confirm meeting schedules\n• Prepare presentation materials\n• Update travel expense reports daily\n• Submit final reports within 5 days of return\n
+DTEND:20241225T220000Z
+LOCATION:Singapore
+DTSTART:20241220T060000Z
+SUMMARY:🏢 Business Travel: Singapore
+UID:0dabf8b7-74e4-4cbb-933c-cb0adcb2b9fb@0dab.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n🏨 CHECK-OUT PROCESS:\n• Settle hotel bill\n• Collect all receipts\n• Confirm no items left behind\n• Arrange airport transportation\n\n📋 Final Business Tasks:\n• Send thank you emails\n• Confirm follow-up actions\n• Update travel status\n• Submit expense receipts\n\n💼 Travel Preparation:\n• Pack all materials\n• Charge devices for flight\n• Check flight status\n• Confirm departure gate\n
+DTEND:20241225T110000Z
+LOCATION:4-star\, Singapore
+DTSTART:20241225T100000Z
+SUMMARY:🏨 Hotel Check-out & Final Preparations
+UID:c7e15277-b60a-4ed3-ab78-ccaced84c094@c7e1.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM5\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20241221T203000Z
+DTSTART:20241221T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 2
+UID:aca4492d-8a33-42dc-acb3-339497a1b4b0@aca4.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT1H
+END:VALARM
+DESCRIPTION:\n📋 POST-TRAVEL TASKS:\n\n💼 Business Follow-up:\n• Send thank you emails to contacts\n• Share meeting outcomes with team\n• Update project status\n• Schedule follow-up meetings\n\n💰 Administrative Tasks:\n• Submit final expense report\n• Upload all receipts\n• Complete travel satisfaction survey\n• Update travel profile if needed\n\n📊 Reporting Requirements:\n• Trip summary report\n• Business outcomes achieved\n• Lessons learned\n• Recommendations for future trips\n\n⏰ Deadline: Complete within 5 business days\n
+DTEND:20241226T100000Z
+DTSTART:20241226T090000Z
+SUMMARY:📋 Post-Travel Follow-up: Singapore
+UID:8e5f8ce2-0222-4304-a6ff-c37bacc3dfec@8e5f.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 2 - Business Schedule\n\n🎯 PURPOSE: Business Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Business Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20241221T120000Z
+LOCATION:Singapore
+DTSTART:20241221T090000Z
+SUMMARY:💼 Business Activities - Day 2
+UID:bdc6b54e-0a79-40cd-9706-f38c8d321300@bdc6.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Business Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20241221T170000Z
+LOCATION:Singapore
+DTSTART:20241221T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 2
+UID:277a7a4b-b415-4da5-bc79-f0116e5bbc84@277a.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🏨 HOTEL INFORMATION:\n• Type: 4-star\n• Location: Singapore\n• Check-in: 3:00 PM\n• Check-out: 2024-12-25 11:00 AM\n\n📋 Check-in Tasks:\n• Confirm room amenities\n• WiFi setup for business\n• Review hotel services\n• Plan transportation to meetings\n\n💼 Hotel Business Center:\n• Printing services available\n• Meeting room bookings\n• Concierge assistance\n
+DTEND:20241220T160000Z
+LOCATION:4-star\, Singapore
+DTSTART:20241220T150000Z
+SUMMARY:🏨 Hotel Check-in: 4-star
+UID:18265ad1-fe3d-4dfb-a344-f88f6a832450@1826.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM5\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20241224T203000Z
+DTSTART:20241224T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 5
+UID:c13e5b7f-2f6c-4ab6-ae6e-c4a18fd84ec8@c13e.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Business Meeting continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20241223T170000Z
+LOCATION:Singapore
+DTSTART:20241223T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 4
+UID:ecb86f8e-4ee4-4bb5-8ee9-e7414ffcb545@ecb8.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM5\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20241223T203000Z
+DTSTART:20241223T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 4
+UID:fe81d151-ba25-48f0-8573-faad5fad1eca@fe81.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 4 - Business Schedule\n\n🎯 PURPOSE: Business Meeting\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Business Meeting activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20241223T120000Z
+LOCATION:Singapore
+DTSTART:20241223T090000Z
+SUMMARY:💼 Business Activities - Day 4
+UID:5f4e9ad0-f8c1-4bb3-9629-ed66724f1604@5f4e.org
+END:VEVENT
+END:VCALENDAR

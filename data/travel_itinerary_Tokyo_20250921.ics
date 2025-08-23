@@ -1,0 +1,227 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:Enterprise Travel Management System
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT1H
+END:VALARM
+DESCRIPTION:\n📋 POST-TRAVEL TASKS:\n\n💼 Business Follow-up:\n• Send thank you emails to contacts\n• Share meeting outcomes with team\n• Update project status\n• Schedule follow-up meetings\n\n💰 Administrative Tasks:\n• Submit final expense report\n• Upload all receipts\n• Complete travel satisfaction survey\n• Update travel profile if needed\n\n📊 Reporting Requirements:\n• Trip summary report\n• Business outcomes achieved\n• Lessons learned\n• Recommendations for future trips\n\n⏰ Deadline: Complete within 5 business days\n
+DTEND:20250927T100000Z
+DTSTART:20250927T090000Z
+SUMMARY:📋 Post-Travel Follow-up: Tokyo
+UID:d90ff998-5179-4032-8c1e-6888b0f6ced4@d90f.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT1H
+END:VALARM
+DESCRIPTION:\n🧳 DEPARTURE CHECKLIST:\n• Check-in online (24h before)\n• Pack business attire for Site Visit\n• Travel documents & ID\n• Phone chargers & adapters\n• Business cards & materials\n• Company laptop & charger\n\n📱 Final confirmations:\n• Flight status check\n• Ground transportation\n• Hotel reservation\n• First day meeting schedule\n
+DTEND:20250921T060000Z
+DTSTART:20250921T040000Z
+SUMMARY:✈️ Departure Preparation - Tokyo
+UID:5ef1c96f-e553-43b4-a26f-b211cfcb40a4@5ef1.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1W
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT2H
+END:VALARM
+DESCRIPTION:\n📋 BUSINESS TRAVEL DETAILS\n═══════════════════════════\n🎯 Purpose: Site Visit\n✈️ Travel Class: Economy\n🏨 Hotel: Standard Business Hotel\n💰 Budget: RM13\,000.00\n👤 Employee: leeyongjun1218@e.newera.edu.my\n📞 Emergency: +1-800-TRAVEL-HELP\n\n🔔 IMPORTANT REMINDERS:\n• Passport & travel documents\n• Expense tracking app\n• Company credit card\n• Travel insurance confirmation\n• Emergency contact information\n\n💼 BUSINESS OBJECTIVES:\n• Review and confirm meeting schedules\n• Prepare presentation materials\n• Update travel expense reports daily\n• Submit final reports within 5 days of return\n
+DTEND:20250926T220000Z
+LOCATION:Tokyo
+DTSTART:20250921T060000Z
+SUMMARY:🏢 Business Travel: Tokyo
+UID:f428c532-bae0-47af-b481-2799c68361b8@f428.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM13\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250924T203000Z
+DTSTART:20250924T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 4
+UID:5e96702f-3f0f-4d0c-ac18-930d5be548e6@5e96.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 5 - Business Schedule\n\n🎯 PURPOSE: Site Visit\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Site Visit activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250925T120000Z
+LOCATION:Tokyo
+DTSTART:20250925T090000Z
+SUMMARY:💼 Business Activities - Day 5
+UID:b44eef55-7f8e-4305-8f71-2399e1743f75@b44e.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n🏨 CHECK-OUT PROCESS:\n• Settle hotel bill\n• Collect all receipts\n• Confirm no items left behind\n• Arrange airport transportation\n\n📋 Final Business Tasks:\n• Send thank you emails\n• Confirm follow-up actions\n• Update travel status\n• Submit expense receipts\n\n💼 Travel Preparation:\n• Pack all materials\n• Charge devices for flight\n• Check flight status\n• Confirm departure gate\n
+DTEND:20250926T110000Z
+LOCATION:Standard Business Hotel\, Tokyo
+DTSTART:20250926T100000Z
+SUMMARY:🏨 Hotel Check-out & Final Preparations
+UID:3cfe1608-5926-4307-802b-b30788d396b7@3cfe.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM13\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250922T203000Z
+DTSTART:20250922T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 2
+UID:ab354ac8-3c3c-43e7-8568-697e84e39ba2@ab35.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Site Visit continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250924T170000Z
+LOCATION:Tokyo
+DTSTART:20250924T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 4
+UID:210626dd-f464-4075-b071-8f2b91e0be59@2106.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM13\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250925T203000Z
+DTSTART:20250925T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 5
+UID:9a558455-9533-4b65-9a76-73c9f1a82a36@9a55.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Site Visit continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250922T170000Z
+LOCATION:Tokyo
+DTSTART:20250922T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 2
+UID:4d6b17cf-e914-4cfa-a0bc-7ee4e3df3210@4d6b.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 2 - Business Schedule\n\n🎯 PURPOSE: Site Visit\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Site Visit activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250922T120000Z
+LOCATION:Tokyo
+DTSTART:20250922T090000Z
+SUMMARY:💼 Business Activities - Day 2
+UID:7c00543f-2b25-4966-beab-42cd0a7f8c52@7c00.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 3 - Business Schedule\n\n🎯 PURPOSE: Site Visit\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Site Visit activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250923T120000Z
+LOCATION:Tokyo
+DTSTART:20250923T090000Z
+SUMMARY:💼 Business Activities - Day 3
+UID:6f462f1a-5bea-47dd-9d94-4f618b661760@6f46.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT3H
+END:VALARM
+DESCRIPTION:\n✈️ FLIGHT INFORMATION:\n• Travel Class: Economy\n• Estimated Duration: 4 hours\n• Destination: Tokyo\n\n🎯 In-flight productivity:\n• Review meeting materials\n• Prepare presentation notes\n• Update project status\n• Plan daily schedule\n\n📱 Upon Arrival:\n• Confirm hotel check-in\n• Update arrival status to team\n• Set up local transportation\n
+DTEND:20250921T120000Z
+LOCATION:Airport Departure Terminal
+DTSTART:20250921T080000Z
+SUMMARY:🛫 Flight Departure to Tokyo
+UID:9272d242-38ad-435d-9c60-9fabd62ce71c@9272.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT3H
+END:VALARM
+DESCRIPTION:\n✈️ RETURN FLIGHT INFORMATION:\n• Departure: Tokyo\n• Travel Class: Economy\n• Estimated Duration: 4 hours\n\n🎯 In-flight Tasks:\n• Trip summary notes\n• Action items review\n• Expense report draft\n• Follow-up planning\n\n📱 Post-arrival Tasks:\n• Confirm safe arrival\n• Submit travel completion report\n• Upload expense receipts\n• Schedule follow-up meetings\n
+DTEND:20250926T180000Z
+LOCATION:Tokyo Airport
+DTSTART:20250926T140000Z
+SUMMARY:🛬 Return Flight from Tokyo
+UID:8d730363-e9bc-4300-a869-889b520bb3dd@8d73.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Site Visit continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250925T170000Z
+LOCATION:Tokyo
+DTSTART:20250925T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 5
+UID:65593311-ecce-4d41-9fb3-93c892bf979d@6559.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-P1D
+END:VALARM
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT2H
+END:VALARM
+DESCRIPTION:\n💰 EXPENSE REPORT FINAL SUBMISSION\n\n📊 Final Tasks:\n• Review all expense entries\n• Ensure all receipts uploaded\n• Verify total amounts\n• Submit for manager approval\n\n💼 Trip Summary Required:\n• Business objectives achieved\n• Total expenses: RM13\,000.00 budgeted\n• ROI and business value\n• Future recommendations\n\n⚠️ IMPORTANT: Expense reports must be submitted within 5 business days of return\n
+DTEND:20251001T173000Z
+DTSTART:20251001T170000Z
+SUMMARY:💰 Expense Report Deadline - Tokyo Trip
+UID:0791b917-5a25-4ee6-87c4-06fdcff39d66@0791.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🏨 HOTEL INFORMATION:\n• Type: Standard Business Hotel\n• Location: Tokyo\n• Check-in: 3:00 PM\n• Check-out: 2025-09-26 11:00 AM\n\n📋 Check-in Tasks:\n• Confirm room amenities\n• WiFi setup for business\n• Review hotel services\n• Plan transportation to meetings\n\n💼 Hotel Business Center:\n• Printing services available\n• Meeting room bookings\n• Concierge assistance\n
+DTEND:20250921T160000Z
+LOCATION:Standard Business Hotel\, Tokyo
+DTSTART:20250921T150000Z
+SUMMARY:🏨 Hotel Check-in: Standard Business Hotel
+UID:08d9db00-1de2-46c2-bdfd-9037772b7d48@08d9.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n🕐 AFTERNOON BLOCK (2 PM - 5 PM):\n• Follow-up meetings\n• Site Visit continuation\n• Documentation time\n• Strategic discussions\n\n🎯 Key Focus Areas:\n• Meeting objectives completion\n• Relationship building\n• Information gathering\n• Next steps planning\n\n📝 End-of-Day Review:\n• Meeting notes compilation\n• Action items tracking\n• Expense recording\n• Schedule confirmation for next day\n
+DTEND:20250923T170000Z
+LOCATION:Tokyo
+DTSTART:20250923T140000Z
+SUMMARY:🤝 Afternoon Sessions - Day 3
+UID:2d2c45f7-763b-45fb-ba2e-9d5f9b5ba62d@2d2c.org
+END:VEVENT
+BEGIN:VEVENT
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:
+TRIGGER:-PT30M
+END:VALARM
+DESCRIPTION:\n💰 DAILY EXPENSE TRACKING:\n\n📊 Record today's expenses:\n• Meals: breakfast\, lunch\, dinner\n• Transportation: taxi\, public transit\n• Business entertainment\n• Incidental expenses\n\n📱 Expense App Tasks:\n• Photo receipts immediately\n• Categorize all expenses\n• Add business purpose notes\n• Submit for pre-approval if needed\n\n💡 Budget Status:\n• Total Budget: RM13\,000.00\n• Track daily spending\n• Flag any budget concerns\n
+DTEND:20250923T203000Z
+DTSTART:20250923T200000Z
+SUMMARY:💰 Daily Expense Tracking - Day 3
+UID:c6d6aada-34cd-4339-8112-58ca394ad979@c6d6.org
+END:VEVENT
+BEGIN:VEVENT
+DESCRIPTION:\n📅 Day 4 - Business Schedule\n\n🎯 PURPOSE: Site Visit\n\n⏰ MORNING BLOCK (9 AM - 12 PM):\n• Primary business meetings\n• Site Visit activities\n• Network building\n• Progress review\n\n📋 Daily Tasks:\n• Update expense tracking\n• Send status update to manager\n• Review next day schedule\n• Follow up on action items\n\n💼 Evening Tasks:\n• Document meeting outcomes\n• Update project status\n• Prepare tomorrow's materials\n
+DTEND:20250924T120000Z
+LOCATION:Tokyo
+DTSTART:20250924T090000Z
+SUMMARY:💼 Business Activities - Day 4
+UID:bb2d2d9d-6f9a-4d26-86d7-c0502bd0535c@bb2d.org
+END:VEVENT
+END:VCALENDAR
